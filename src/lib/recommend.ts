@@ -1,10 +1,12 @@
-import { hasIngredient, normalizeIngredient, substitutesFor } from '@/lib/ingredients';
+import { hasIngredient, isMainIngredient, normalizeIngredient, substitutesFor } from '@/lib/ingredients';
 import type { Cuisine, Diet, PantryItem, Preferences, Recipe, RecipeIngredient } from '@/types';
 
 export type MissingIngredient = {
   ingredient: RecipeIngredient;
   /** 냉장고에 있는 대체 재료 */
   availableSubstitutes: string[];
+  /** 요리 이름에 들어간 주재료 (배숙의 배) */
+  main: boolean;
 };
 
 export type RecipeMatch = {
@@ -55,12 +57,18 @@ export function matchRecipe(recipe: Recipe, owned: Set<string>): RecipeMatch {
       have.push(ingredient);
     } else {
       const availableSubstitutes = substitutesFor(ingredient.name).filter((s) => hasIngredient(owned, s));
-      missing.push({ ingredient, availableSubstitutes });
+      const main = isMainIngredient(
+        recipe.title,
+        ingredient.name,
+        recipe.ingredients.map((i) => i.name),
+      );
+      missing.push({ ingredient, availableSubstitutes, main });
     }
   }
 
   const core = have.length + missing.length;
-  const substituted = missing.filter((m) => m.availableSubstitutes.length > 0).length;
+  // 요리 이름에 들어간 주재료는 바꾸면 다른 요리가 되기 쉬워서 대체 재료로 쳐 주지 않는다.
+  const substituted = missing.filter((m) => !m.main && m.availableSubstitutes.length > 0).length;
   // 대체 재료로 채운 경우는 절반만 인정한다.
   const coverage = core === 0 ? 0 : (have.length + substituted * 0.5) / core;
 
