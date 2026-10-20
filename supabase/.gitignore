@@ -1,0 +1,4 @@
+# Supabase CLI 로컬 파일
+.branches
+.temp
+.env
