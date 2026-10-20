@@ -1,13 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { IngredientIcon } from '@/components/IngredientIcon';
 import { RecipeImage } from '@/components/RecipeImage';
 import { DotsIcon } from '@/components/ScreenHeader';
 import { recommendRecipes } from '@/lib/recommend';
+import { formatDuration, useVideoIndex, videoThumbnail } from '@/lib/video';
 import { useAppState } from '@/state/AppState';
 import { useRecipes } from '@/state/RecipesProvider';
 import { colors, radius, spacing } from '@/theme';
@@ -25,6 +26,14 @@ export default function HomeScreen() {
     [recipes, pantry],
   );
   const shelf: Recipe[] = recent.length > 0 ? recent : suggested.length > 0 ? suggested : recipes;
+
+  // 영상이 있는 레시피: 내 재료로 만들 수 있는 것부터. 영상이 적을 때는 줄을 숨긴다.
+  const videos = useVideoIndex();
+  const videoShelf = useMemo(() => {
+    const ordered = [...suggested, ...recipes];
+    const seen = new Set<string>();
+    return ordered.filter((r) => videos.has(r.id) && !seen.has(r.id) && seen.add(r.id)).slice(0, 8);
+  }, [suggested, recipes, videos]);
 
   const submit = () => {
     const names = text.split(/[,\s]+/).filter(Boolean);
@@ -128,6 +137,40 @@ export default function HomeScreen() {
           </Pressable>
         ))}
       </ScrollView>
+
+      {videoShelf.length >= 4 && (
+        <>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>영상으로 따라 하기</Text>
+            <Pressable onPress={() => router.navigate('/recipes')} hitSlop={8} style={styles.more}>
+              <Text style={styles.moreText}>더보기</Text>
+              <Ionicons name="chevron-forward" size={13} color={colors.textMuted} />
+            </Pressable>
+          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.shelf}>
+            {videoShelf.map((r) => {
+              const video = videos.get(r.id)!;
+              return (
+                <Pressable
+                  key={r.id}
+                  style={styles.videoItem}
+                  onPress={() => router.push({ pathname: '/recipe/[id]', params: { id: r.id } })}>
+                  <View style={styles.videoThumb}>
+                    <Image source={{ uri: videoThumbnail(video.videoId) }} style={styles.videoImage} resizeMode="cover" />
+                    <View style={styles.videoPlay}>
+                      <Ionicons name="play" size={14} color="#fff" style={styles.videoPlayIcon} />
+                    </View>
+                    <Text style={styles.videoDuration}>{formatDuration(video.durationS)}</Text>
+                  </View>
+                  <Text style={styles.shelfTitle} numberOfLines={1}>
+                    {r.title}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        </>
+      )}
     </ScrollView>
   );
 }
@@ -252,5 +295,47 @@ const styles = StyleSheet.create({
   shelfTitle: {
     fontSize: 13,
     color: colors.text,
+  },
+  videoItem: {
+    width: 168,
+    gap: 6,
+  },
+  videoThumb: {
+    width: 168,
+    aspectRatio: 16 / 9,
+    borderRadius: radius.md,
+    overflow: 'hidden',
+    backgroundColor: colors.surfaceMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // 웹에서 absoluteFill만 주면 확대돼 잘리므로 크기를 직접 준다 (RecipeImage와 같음)
+  videoImage: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+  },
+  videoPlay: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  videoPlayIcon: {
+    marginLeft: 2,
+  },
+  videoDuration: {
+    position: 'absolute',
+    right: 6,
+    bottom: 6,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 4,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '700',
   },
 });

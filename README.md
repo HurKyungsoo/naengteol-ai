@@ -133,6 +133,8 @@ npx supabase functions deploy analyze-fridge
 - 고르는 기준: 임베드 허용, 30초~20분, 제목에 레시피 이름의 낱말이 많이 들어간 영상. 하나도 맞지 않으면 영상 없음으로 두고 카드를 숨긴다.
 - 결과(없음 포함)는 `recipe_videos` 테이블에 저장해 모두가 같이 쓴다. 테이블: `supabase/migrations/20261022000000_recipe_videos.sql`
 - secrets: `YOUTUBE_API_KEY` (Google Cloud, YouTube Data API v3만 허용하도록 제한한 키). 무료 할당량은 하루 10,000 단위, 새 레시피 검색 1번에 약 101 단위 → 하루 약 99개. 다 쓰면 저장하지 않고 다음 날 다시 찾는다.
+- **미리 채우기:** pg_cron이 매일 UTC 08:30~08:50(한국 오후 5시 반쯤, 할당량 초기화 직후)에 `{ batch: 33 }`으로 세 번 불러 하루 99개씩 채운다. 30일 지난 영상은 아직 재생 가능한지 다시 확인하고, 안 되면 지워서 다시 검색한다. 설정: `supabase/migrations/20261023000000_find_video_cron.sql` (CRON_KEY는 함수 secret과 DB vault에만 둔다). 결과 확인: `select status_code, content from net._http_response order by id desc limit 3;`
+- 앱은 영상 목록을 하루 한 번 받아 홈의 "영상으로 따라 하기"와 레시피 탭의 "▶ 영상" 필터에 쓴다 (영상이 4개 미만이면 홈 줄은 숨김).
 - 배포: `npx supabase functions deploy find-video --project-ref <ref> --use-api`
 - 휴대폰 미리보기에서 특정 화면 열기: `/phone-preview.html?path=/recipe/fs-1060`
 

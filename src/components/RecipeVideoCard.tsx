@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { YouTubePlayer } from '@/components/YouTubePlayer';
-import { formatDuration, type RecipeVideo } from '@/lib/video';
+import { formatDuration, videoThumbnail, type RecipeVideo } from '@/lib/video';
 import { colors, radius, spacing } from '@/theme';
 
 /** 참고 영상 카드. 처음엔 썸네일만 보여 주고, 누르면 그 자리에서 유튜브 플레이어로 재생한다. */
@@ -29,7 +29,7 @@ export function RecipeVideoCard({ video }: { video: RecipeVideo }) {
             accessibilityRole="button"
             accessibilityLabel={`참고 영상 재생: ${video.title}`}>
             <Image
-              source={{ uri: `https://i.ytimg.com/vi/${video.videoId}/hqdefault.jpg` }}
+              source={{ uri: videoThumbnail(video.videoId) }}
               style={styles.thumb}
               resizeMode="cover"
             />

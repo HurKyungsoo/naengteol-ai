@@ -7,21 +7,26 @@ import { RecipeListItem } from '@/components/RecipeListItem';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { FilterPills } from '@/components/Tabs';
 import { matchesTab, pantryNameSet, recommendRecipes } from '@/lib/recommend';
+import { useVideoIndex } from '@/lib/video';
 import { useAppState } from '@/state/AppState';
 import { useRecipes } from '@/state/RecipesProvider';
 import { colors, radius, spacing } from '@/theme';
 import { CUISINES, DIETS, type Cuisine } from '@/types';
 
-type Tab = 'all' | Cuisine;
+// 'video'는 참고 영상이 있는 레시피만 보여 준다.
+type Tab = 'all' | 'video' | Cuisine;
 
 export default function RecipesScreen() {
   const { pantry, preferences } = useAppState();
   const { recipes } = useRecipes();
   const [tab, setTab] = useState<Tab>('all');
+  const videos = useVideoIndex();
 
   const owned = useMemo(() => pantryNameSet(pantry), [pantry]);
   const matches = useMemo(() => recommendRecipes(recipes, pantry, preferences), [recipes, pantry, preferences]);
-  const visible = matches.filter((m) => matchesTab(m.recipe, tab === 'all' ? undefined : tab));
+  const visible = matches.filter((m) =>
+    tab === 'video' ? videos.has(m.recipe.id) : matchesTab(m.recipe, tab === 'all' ? undefined : tab),
+  );
 
   const conditions = [
     preferences.diet && DIETS.find((d) => d.id === preferences.diet)?.label,
@@ -40,7 +45,11 @@ export default function RecipesScreen() {
         ListHeaderComponent={
           <View style={styles.header}>
             <FilterPills
-              options={[{ value: 'all' as Tab, label: '전체' }, ...CUISINES.map((c) => ({ value: c as Tab, label: c }))]}
+              options={[
+                { value: 'all' as Tab, label: '전체' },
+                ...(videos.size > 0 ? [{ value: 'video' as Tab, label: '▶ 영상' }] : []),
+                ...CUISINES.map((c) => ({ value: c as Tab, label: c })),
+              ]}
               value={tab}
               onChange={setTab}
             />
