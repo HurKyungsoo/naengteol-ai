@@ -126,6 +126,16 @@ npx supabase functions deploy analyze-fridge
 - 설명 문구를 바꾸고 다시 만들려면 `supabase/functions/_shared/guide.ts`의 `RULES`를 고쳐 배포하고, `recipe_guides`에서 해당 행을 지우고, 앱의 `src/lib/guide.ts` `CACHE_KEY` 버전을 올린다.
 - 모델: `gemini-3.5-flash-lite`. 2026-10 점검(레시피 9종): flash-lite는 2~3초·전부 성공. 3.6-flash는 11~14초, 3.8-flash는 80~120초에 503 실패가 잦아 버튼을 누르고 기다리는 용도로는 쓰지 않았다. 품질 차이는 규칙(RULES)을 다듬어 줄였다 (오타·"약 중불"·억지 시간·스테이크 익힘 오류 등 자동 검사 13건 → 0건).
 
+### 참고 영상 (find-video)
+
+공공 레시피 상세 화면을 열면 `supabase/functions/find-video`가 DB의 레시피 이름으로 유튜브를 검색해 참고 영상을 하나 고른다. 앱에서는 유튜브 공식 임베드 플레이어로만 재생한다 (조회수·수익은 원작자에게).
+
+- 고르는 기준: 임베드 허용, 30초~20분, 제목에 레시피 이름의 낱말이 많이 들어간 영상. 하나도 맞지 않으면 영상 없음으로 두고 카드를 숨긴다.
+- 결과(없음 포함)는 `recipe_videos` 테이블에 저장해 모두가 같이 쓴다. 테이블: `supabase/migrations/20261022000000_recipe_videos.sql`
+- secrets: `YOUTUBE_API_KEY` (Google Cloud, YouTube Data API v3만 허용하도록 제한한 키). 무료 할당량은 하루 10,000 단위, 새 레시피 검색 1번에 약 101 단위 → 하루 약 99개. 다 쓰면 저장하지 않고 다음 날 다시 찾는다.
+- 배포: `npx supabase functions deploy find-video --project-ref <ref> --use-api`
+- 휴대폰 미리보기에서 특정 화면 열기: `/phone-preview.html?path=/recipe/fs-1060`
+
 ## 이미지 출처
 
 - **레시피 사진** `assets/recipes/` — Unsplash 라이선스 무료 사진 (Unsplash+ 유료 사진 제외). 사진작가와 원본 링크는 `src/data/assets.ts`에 있고, 앱의 마이 → "사진·아이콘 출처"에서 볼 수 있다.

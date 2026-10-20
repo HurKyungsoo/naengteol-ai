@@ -107,11 +107,15 @@
           <span class="battery"></span>
         </span>
       </div>
-      <iframe src="/" title="냉털AI" allow="camera"></iframe>
+      <iframe src="/" title="냉털AI" allow="camera; autoplay; encrypted-media; fullscreen" allowfullscreen></iframe>
       <div class="home"></div>
     </div>
   </div>
   <script>
+    // ?path=/recipe/fs-1060 처럼 특정 화면으로 바로 열 수 있다.
+    const path = new URLSearchParams(location.search).get('path');
+    if (path && path.startsWith('/')) document.querySelector('iframe').src = path;
+
     const clock = document.getElementById('clock');
     const tick = () => {
       const d = new Date();
