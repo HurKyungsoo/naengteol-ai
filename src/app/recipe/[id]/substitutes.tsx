@@ -57,7 +57,11 @@ export default function SubstitutesScreen() {
             {selected && (
               <>
                 <Text style={[styles.sectionTitle, styles.spaced]}>
-                  {options.length > 0 ? `${selected.ingredient.name} 대신 이 재료로도 만들 수 있어요` : `${selected.ingredient.name}은(는) 대체하기 어려워요`}
+                  {options.length > 0
+                    ? `${selected.ingredient.name} 대신 이 재료로도 만들 수 있어요`
+                    : selected.ingredient.optional
+                      ? `${selected.ingredient.name}은(는) 선택 재료라 빼고 만들어도 돼요`
+                      : `${selected.ingredient.name}은(는) 아직 등록된 대체 재료가 없어요`}
                 </Text>
                 {options.length > 0 && (
                   <View style={styles.grid}>
