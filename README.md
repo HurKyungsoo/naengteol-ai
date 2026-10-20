@@ -123,7 +123,8 @@ npx supabase functions deploy analyze-fridge
 - 한 번 만든 설명은 `recipe_guides` 테이블에 저장해 모든 사용자가 같이 쓴다 (두 번째부터 즉시, 비용 없음). 앱도 기기에 저장한다.
 - 새로 만들 때만 호출 제한(분당 6회)이 적용된다. 테이블: `supabase/migrations/20261021000000_recipe_guides.sql`
 - 배포: `npx supabase functions deploy explain-recipe --project-ref <ref> --use-api`
-- 설명 문구를 바꾸고 다시 만들려면 함수의 `RULES`를 고쳐 배포하고 `recipe_guides`에서 해당 행을 지운다.
+- 설명 문구를 바꾸고 다시 만들려면 `supabase/functions/_shared/guide.ts`의 `RULES`를 고쳐 배포하고, `recipe_guides`에서 해당 행을 지우고, 앱의 `src/lib/guide.ts` `CACHE_KEY` 버전을 올린다.
+- 모델: `gemini-3.5-flash-lite`. 2026-10 점검(레시피 9종): flash-lite는 2~3초·전부 성공. 3.6-flash는 11~14초, 3.8-flash는 80~120초에 503 실패가 잦아 버튼을 누르고 기다리는 용도로는 쓰지 않았다. 품질 차이는 규칙(RULES)을 다듬어 줄였다 (오타·"약 중불"·억지 시간·스테이크 익힘 오류 등 자동 검사 13건 → 0건).
 
 ## 이미지 출처
 

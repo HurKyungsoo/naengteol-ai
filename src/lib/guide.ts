@@ -16,7 +16,8 @@ export type RecipeGuide = {
   cautions: string[];
 };
 
-const CACHE_KEY = 'naengteol/guides/v1';
+// 설명 규칙(supabase/functions/_shared/guide.ts)을 바꿔 다시 만들 때는 버전을 올려 기기에 저장된 예전 설명을 버린다.
+const CACHE_KEY = 'naengteol/guides/v2';
 const TIMEOUT_MS = 30_000;
 
 const ERROR_MESSAGES: Record<number, string> = {
