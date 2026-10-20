@@ -26,7 +26,9 @@ export default function AddIngredientsScreen() {
 
   const owned = useMemo(() => new Set(pantry.map((p) => normalizeIngredient(p.name))), [pantry]);
 
-  const query = normalizeIngredient(text);
+  // "계란, 두부, 양" 처럼 여러 개를 입력하는 중이면 마지막 단어로 자동완성한다.
+  const tokens = text.split(/[,\s]+/);
+  const query = normalizeIngredient(tokens[tokens.length - 1] ?? '');
   const suggestions = query
     ? KNOWN_INGREDIENTS.filter((n) => n.includes(query) && !owned.has(normalizeIngredient(n))).slice(0, 6)
     : [];
@@ -36,11 +38,24 @@ export default function AddIngredientsScreen() {
     (n) => !owned.has(normalizeIngredient(n)),
   );
 
-  const add = (name: string) => {
-    const trimmed = name.trim();
-    if (!trimmed) return;
-    setMessage(addIngredient(trimmed) ? null : `'${trimmed}'은(는) 이미 있어요`);
+  /** 쉼표나 띄어쓰기로 구분한 재료를 한 번에 추가한다. */
+  const addAll = (input: string) => {
+    const names = input.split(/[,\s]+/).filter(Boolean);
+    if (names.length === 0) return;
+    const duplicates = names.filter((n) => !addIngredient(n));
+    setMessage(duplicates.length > 0 ? `${duplicates.join(', ')}은(는) 이미 있어요` : null);
     setText('');
+  };
+
+  const addSuggestion = (name: string) => {
+    addIngredient(name);
+    setMessage(null);
+    // 입력 중이던 마지막 단어만 자동완성으로 바꾸고, 앞서 쓴 재료는 남겨 둔다.
+    setText(tokens.slice(0, -1).filter(Boolean).join(', ') + (tokens.length > 1 ? ', ' : ''));
+  };
+
+  const add = (name: string) => {
+    setMessage(addIngredient(name) ? null : `'${name}'은(는) 이미 있어요`);
   };
 
   const fromLibrary = async () => {
@@ -71,20 +86,20 @@ export default function AddIngredientsScreen() {
                   setText(t);
                   setMessage(null);
                 }}
-                placeholder="재료명을 입력하세요"
+                placeholder="재료명 입력 (여러 개는 쉼표로 구분)"
                 placeholderTextColor={colors.textMuted}
                 style={styles.searchInput}
                 returnKeyType="done"
-                onSubmitEditing={() => add(text)}
+                onSubmitEditing={() => addAll(text)}
               />
-              <Pressable onPress={() => add(text)} hitSlop={8} accessibilityLabel="재료 추가">
+              <Pressable onPress={() => addAll(text)} hitSlop={8} accessibilityLabel="재료 추가">
                 <Ionicons name="add" size={24} color={colors.text} />
               </Pressable>
             </View>
             {suggestions.length > 0 && (
               <View style={styles.chips}>
                 {suggestions.map((s) => (
-                  <Pressable key={s} style={styles.suggestion} onPress={() => add(s)}>
+                  <Pressable key={s} style={styles.suggestion} onPress={() => addSuggestion(s)}>
                     <IngredientIcon name={s} size={18} />
                     <Text style={styles.suggestionText}>{s}</Text>
                   </Pressable>

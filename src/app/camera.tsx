@@ -6,9 +6,7 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-nati
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { goBack } from '@/components/ScreenHeader';
-import { stripDataUrl } from '@/lib/analyze';
-import { setCapturedPhoto } from '@/lib/photoSession';
-import { pickPhotoFromLibrary } from '@/lib/pickPhoto';
+import { pickPhotoFromLibrary, preparePhoto } from '@/lib/pickPhoto';
 import { colors, radius, spacing } from '@/theme';
 
 export default function CameraScreen() {
@@ -24,9 +22,9 @@ export default function CameraScreen() {
     if (!cameraRef.current || !ready || busy) return;
     setBusy(true);
     try {
-      const photo = await cameraRef.current.takePictureAsync({ base64: true, quality: 0.5 });
-      if (!photo?.base64) throw new Error('사진 데이터가 없어요');
-      setCapturedPhoto({ uri: photo.uri, base64: stripDataUrl(photo.base64), mimeType: 'image/jpeg' });
+      const photo = await cameraRef.current.takePictureAsync({ quality: 1 });
+      if (!photo?.uri) throw new Error('사진 데이터가 없어요');
+      await preparePhoto(photo.uri, photo.width);
       router.replace('/analysis');
     } catch (e) {
       setError(e instanceof Error ? e.message : '촬영에 실패했어요');

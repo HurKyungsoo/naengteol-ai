@@ -64,6 +64,12 @@ export default function PreferencesScreen() {
           })}
         </View>
 
+        {(draft.diet === '다이어트' || draft.diet === '고단백') && (
+          <Text style={styles.hint}>
+            다이어트식·고단백 식단은 메뉴를 고르기 위한 분류예요. 의학적 효과나 영양 목표 달성을 보장하지 않아요.
+          </Text>
+        )}
+
         <Text style={[styles.sectionTitle, styles.spaced]}>추가 조건을 설정하세요</Text>
 
         <OptionRow
