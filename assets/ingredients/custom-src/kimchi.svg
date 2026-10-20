@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <defs>
+    <radialGradient id="bowl" cx="0.35" cy="0.25" r="0.9"><stop offset="0" stop-color="#FFFFFF"/><stop offset="0.6" stop-color="#EEF0F2"/><stop offset="1" stop-color="#C9CED4"/></radialGradient>
+    <linearGradient id="rim" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#DDE1E6"/></linearGradient>
+    <radialGradient id="red" cx="0.35" cy="0.3" r="0.8"><stop offset="0" stop-color="#FF7A45"/><stop offset="0.55" stop-color="#E5381E"/><stop offset="1" stop-color="#A81E12"/></radialGradient>
+    <linearGradient id="stalk" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFE7C2"/><stop offset="1" stop-color="#F29A55"/></linearGradient>
+    <linearGradient id="green" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9BCB4C"/><stop offset="1" stop-color="#4F8F2A"/></linearGradient>
+  </defs>
+  <path d="M26 138 Q30 214 128 220 Q226 214 230 138 Z" fill="url(#bowl)"/>
+  <path d="M44 140 Q46 104 80 92 Q96 60 132 66 Q170 58 190 88 Q220 98 212 140 Z" fill="url(#red)"/>
+  <path d="M70 128 Q78 96 112 92 Q104 118 92 136 Z" fill="url(#stalk)"/>
+  <path d="M138 132 Q146 98 178 92 Q176 118 160 138 Z" fill="url(#stalk)" opacity="0.95"/>
+  <path d="M110 120 Q120 92 150 84 Q144 108 132 124 Z" fill="url(#red)"/>
+  <path d="M96 80 Q108 54 132 58 Q122 74 104 86 Z" fill="url(#green)"/>
+  <path d="M168 84 Q184 64 204 74 Q190 86 174 94 Z" fill="url(#green)"/>
+  <ellipse cx="96" cy="104" rx="14" ry="6" fill="#FFB08A" opacity="0.7" transform="rotate(-25 96 104)"/>
+  <ellipse cx="150" cy="76" rx="10" ry="4" fill="#FFB08A" opacity="0.6" transform="rotate(-15 150 76)"/>
+  <g fill="#FFF3D6" opacity="0.9"><circle cx="124" cy="110" r="3"/><circle cx="170" cy="112" r="2.5"/><circle cx="84" cy="118" r="2.5"/><circle cx="190" cy="124" r="2"/></g>
+  <path d="M22 136 Q22 128 30 128 L226 128 Q234 128 234 136 Q234 144 226 144 L30 144 Q22 144 22 136 Z" fill="url(#rim)"/>
+  <path d="M40 160 Q60 200 120 204" fill="none" stroke="#FFFFFF" stroke-width="7" stroke-linecap="round" opacity="0.8"/>
+</svg>

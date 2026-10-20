@@ -1,0 +1,133 @@
+﻿<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>냉털AI 미리보기</title>
+  <style>
+    /* 개발용: 웹 빌드를 휴대폰 프레임 안에 띄워서 보는 페이지 */
+    :root {
+      --bg: #e9e9e7;
+      --frame: #fbfbfa;
+      --ink: #111;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      font-family: -apple-system, 'Segoe UI', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+      /* 프레임은 transform으로 축소되므로 원래 크기만큼 스크롤이 생기지 않게 한다 */
+      height: 100vh;
+      overflow: hidden;
+    }
+    .phone {
+      position: relative;
+      width: 402px;
+      height: 874px;
+      flex-shrink: 0;
+      border-radius: 64px;
+      background: var(--frame);
+      padding: 6px;
+      box-shadow:
+        0 0 0 2px #d9d9d6,
+        0 30px 80px rgba(0, 0, 0, 0.12);
+      transform-origin: center;
+    }
+    .screen {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      border-radius: 58px;
+      overflow: hidden;
+      background: #ffffff;
+    }
+    .status {
+      position: absolute;
+      inset: 0 0 auto 0;
+      height: 54px;
+      padding: 18px 34px 0 40px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--ink);
+      z-index: 2;
+      pointer-events: none;
+    }
+    .island {
+      position: absolute;
+      top: 11px;
+      left: 50%;
+      width: 124px;
+      height: 36px;
+      margin-left: -62px;
+      border-radius: 20px;
+      background: #000;
+      z-index: 3;
+    }
+    .icons { display: flex; gap: 6px; align-items: center; }
+    .bars { display: flex; gap: 2px; align-items: flex-end; height: 11px; }
+    .bars i { width: 3px; background: var(--ink); border-radius: 1px; }
+    .battery { width: 25px; height: 12px; border-radius: 4px; background: var(--ink); }
+    iframe {
+      position: absolute;
+      /* 위: 상태 표시줄, 아래: 홈 인디케이터 영역 (실기기의 safe area 역할) */
+      inset: 54px 0 24px 0;
+      width: 100%;
+      height: calc(100% - 78px);
+      border: 0;
+    }
+    .home {
+      position: absolute;
+      bottom: 8px;
+      left: 50%;
+      width: 136px;
+      height: 5px;
+      margin-left: -68px;
+      border-radius: 3px;
+      background: var(--ink);
+      z-index: 2;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="phone">
+    <div class="screen">
+      <div class="island"></div>
+      <div class="status">
+        <span id="clock">9:41</span>
+        <span class="icons">
+          <span class="bars"><i style="height:4px"></i><i style="height:6px"></i><i style="height:8px"></i><i style="height:11px"></i></span>
+          <span class="battery"></span>
+        </span>
+      </div>
+      <iframe src="/" title="냉털AI" allow="camera"></iframe>
+      <div class="home"></div>
+    </div>
+  </div>
+  <script>
+    const clock = document.getElementById('clock');
+    const tick = () => {
+      const d = new Date();
+      clock.textContent = d.getHours() + ':' + String(d.getMinutes()).padStart(2, '0');
+    };
+    tick();
+    setInterval(tick, 30000);
+
+    // 창이 작으면 프레임 전체를 줄여서 보여준다.
+    const phone = document.querySelector('.phone');
+    const fit = () => {
+      const scale = Math.min(1, (innerHeight - 48) / 874, (innerWidth - 32) / 402);
+      phone.style.transform = `scale(${scale})`;
+    };
+    fit();
+    addEventListener('resize', fit);
+  </script>
+</body>
+</html>

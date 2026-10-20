@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <defs>
+    <radialGradient id="head" cx="0.4" cy="0.35" r="0.75"><stop offset="0" stop-color="#E9F7C8"/><stop offset="0.6" stop-color="#B7DE7E"/><stop offset="1" stop-color="#7DB548"/></radialGradient>
+    <radialGradient id="outer" cx="0.35" cy="0.3" r="0.85"><stop offset="0" stop-color="#A7D86A"/><stop offset="1" stop-color="#4E8E2A"/></radialGradient>
+  </defs>
+  <path d="M30 146 Q24 92 70 66 Q60 112 76 150 Q80 196 128 214 Q60 214 30 146 Z" fill="url(#outer)"/>
+  <path d="M226 146 Q232 92 186 66 Q196 112 180 150 Q176 196 128 214 Q196 214 226 146 Z" fill="url(#outer)"/>
+  <circle cx="128" cy="132" r="84" fill="url(#head)"/>
+  <path d="M128 50 Q104 96 112 216" fill="none" stroke="#F5FCE6" stroke-width="7" stroke-linecap="round" opacity="0.9"/>
+  <path d="M112 120 Q86 116 64 128" fill="none" stroke="#F5FCE6" stroke-width="4" stroke-linecap="round" opacity="0.8"/>
+  <path d="M110 160 Q84 164 66 178" fill="none" stroke="#F5FCE6" stroke-width="4" stroke-linecap="round" opacity="0.8"/>
+  <path d="M116 86 Q140 92 164 84" fill="none" stroke="#F5FCE6" stroke-width="4" stroke-linecap="round" opacity="0.7"/>
+  <path d="M150 60 Q196 84 204 140 Q206 184 168 208" fill="none" stroke="#8FC456" stroke-width="5" stroke-linecap="round" opacity="0.8"/>
+  <ellipse cx="96" cy="96" rx="22" ry="12" fill="#FFFFFF" opacity="0.45" transform="rotate(-30 96 96)"/>
+</svg>

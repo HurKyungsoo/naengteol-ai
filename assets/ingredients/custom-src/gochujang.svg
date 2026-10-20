@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <defs>
+    <linearGradient id="body" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#C8231B"/><stop offset="0.35" stop-color="#F0472F"/><stop offset="1" stop-color="#9E1712"/></linearGradient>
+    <linearGradient id="lid" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#8E1410"/><stop offset="0.35" stop-color="#C42A1F"/><stop offset="1" stop-color="#6E0E0B"/></linearGradient>
+    <linearGradient id="label" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#F3E3C2"/><stop offset="0.4" stop-color="#FFF6E2"/><stop offset="1" stop-color="#D9C39A"/></linearGradient>
+    <radialGradient id="pepper" cx="0.35" cy="0.3" r="0.8"><stop offset="0" stop-color="#FF6A4A"/><stop offset="1" stop-color="#B3170F"/></radialGradient>
+  </defs>
+  <path d="M48 92 L208 92 L200 206 Q198 222 182 222 L74 222 Q58 222 56 206 Z" fill="url(#body)"/>
+  <path d="M60 124 L196 124 L192 182 L64 182 Z" fill="url(#label)"/>
+  <path d="M100 154 Q118 134 150 140 Q166 142 170 132 Q174 150 152 160 Q122 172 100 154 Z" fill="url(#pepper)"/>
+  <path d="M168 134 Q170 122 180 120" fill="none" stroke="#3E8E2E" stroke-width="5" stroke-linecap="round"/>
+  <rect x="40" y="62" width="176" height="36" rx="12" fill="url(#lid)"/>
+  <rect x="50" y="66" width="156" height="8" rx="4" fill="#E2543E" opacity="0.7"/>
+  <path d="M76 196 L74 104" stroke="#FF8B70" stroke-width="8" stroke-linecap="round" opacity="0.55"/>
+</svg>
