@@ -7,7 +7,7 @@ import { IngredientIcon } from '@/components/IngredientIcon';
 import { BottomBar, PrimaryButton } from '@/components/PrimaryButton';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { analyzeFridgePhoto, type DetectedIngredient } from '@/lib/analyze';
-import { normalizeIngredient } from '@/lib/ingredients';
+import { hasIngredient, normalizeIngredient } from '@/lib/ingredients';
 import { getCapturedPhoto } from '@/lib/photoSession';
 import { useAppState } from '@/state/AppState';
 import { colors, radius, spacing } from '@/theme';
@@ -126,7 +126,7 @@ export default function AnalysisScreen() {
             <View style={styles.list}>
               {items.map((item) => {
                 const isChecked = checked.has(item.name);
-                const isOwned = owned.has(normalizeIngredient(item.name));
+                const isOwned = hasIngredient(owned, item.name);
                 return (
                   <Pressable
                     key={item.name}

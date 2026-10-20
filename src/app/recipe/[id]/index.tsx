@@ -8,16 +8,17 @@ import { IngredientIcon } from '@/components/IngredientIcon';
 import { BottomBar, PrimaryButton } from '@/components/PrimaryButton';
 import { RecipeImage } from '@/components/RecipeImage';
 import { goBack, ScreenHeader } from '@/components/ScreenHeader';
-import { findRecipe } from '@/data/recipes';
-import { normalizeIngredient } from '@/lib/ingredients';
+import { hasIngredient } from '@/lib/ingredients';
 import { matchRecipe, pantryNameSet } from '@/lib/recommend';
 import { useAppState } from '@/state/AppState';
+import { useRecipes } from '@/state/RecipesProvider';
 import { colors, radius, shadow, spacing } from '@/theme';
 import type { RecipeIngredient } from '@/types';
 
 export default function RecipeDetailScreen() {
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { findRecipe } = useRecipes();
   const recipe = findRecipe(id);
   const { pantry, favorites, toggleFavorite, markViewed } = useAppState();
 
@@ -93,7 +94,7 @@ export default function RecipeDetailScreen() {
           </View>
           <View style={styles.card}>
             {main.map((i) => (
-              <IngredientRow key={i.name} ingredient={i} owned={owned.has(normalizeIngredient(i.name))} />
+              <IngredientRow key={i.name} ingredient={i} owned={hasIngredient(owned, i.name)} />
             ))}
           </View>
 
@@ -114,7 +115,7 @@ export default function RecipeDetailScreen() {
               <Text style={[styles.sectionTitle, styles.subSection]}>추가 재료</Text>
               <View style={styles.card}>
                 {seasonings.map((i) => (
-                  <IngredientRow key={i.name} ingredient={i} owned={owned.has(normalizeIngredient(i.name))} subtle />
+                  <IngredientRow key={i.name} ingredient={i} owned={hasIngredient(owned, i.name)} subtle />
                 ))}
               </View>
             </>

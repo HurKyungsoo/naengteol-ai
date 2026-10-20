@@ -57,6 +57,19 @@ export function normalizeIngredient(name: string): string {
   return ALIASES[compact] ?? compact;
 }
 
+/**
+ * 냉장고에 이 재료가 있는지. 이름이 같거나, 수식어가 앞에 붙은 경우(연두부 → 두부, 칵테일새우 → 새우)도 같은 재료로 본다.
+ * 뒤에 붙는 경우(고추 → 고추장)는 다른 재료라서 보지 않고, 한 글자 재료(파)는 오인이 많아 정확히 같을 때만 본다.
+ */
+export function hasIngredient(owned: Set<string>, name: string): boolean {
+  const key = normalizeIngredient(name);
+  if (owned.has(key)) return true;
+  for (const o of owned) {
+    if (o.length >= 2 && key.length > o.length && key.endsWith(o)) return true;
+  }
+  return false;
+}
+
 export function substitutesFor(name: string): string[] {
   return SUBSTITUTES[normalizeIngredient(name)] ?? [];
 }

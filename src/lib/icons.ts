@@ -84,6 +84,14 @@ const INGREDIENT_ICON: Record<string, IconName> = {
 const SEASONINGS = new Set(['간장', '식용유', '올리브유', '참기름', '식초', '소금', '후추', '설탕', '다진마늘', '고춧가루', '올리고당']);
 export const KNOWN_INGREDIENTS = Object.keys(INGREDIENT_ICON).filter((n) => !SEASONINGS.has(n));
 
+// 긴 이름부터 비교해야 "돼지고기"가 "고기"보다 먼저 맞는다.
+const ICON_KEYS_BY_LENGTH = Object.keys(INGREDIENT_ICON).sort((a, b) => b.length - a.length);
+
 export function ingredientIcon(name: string): IconName {
-  return INGREDIENT_ICON[normalizeIngredient(name)] ?? 'bowl';
+  const key = normalizeIngredient(name);
+  const exact = INGREDIENT_ICON[key];
+  if (exact) return exact;
+  // "연두부", "칵테일새우"처럼 앞에 수식어가 붙은 이름
+  const suffix = ICON_KEYS_BY_LENGTH.find((k) => k.length >= 2 && key.endsWith(k));
+  return suffix ? INGREDIENT_ICON[suffix] : 'bowl';
 }

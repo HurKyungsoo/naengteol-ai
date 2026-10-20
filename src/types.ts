@@ -39,8 +39,21 @@ export type RecipeIngredient = {
 };
 
 export type RecipeStep = {
-  title: string;
+  /** 직접 쓴 샘플 레시피에만 있다 */
+  title?: string;
   text: string;
+  /** 단계 사진 주소 (공공 레시피) */
+  image?: string;
+};
+
+/** 1인분 기준 영양정보 (식품안전나라 원본 값) */
+export type Nutrition = {
+  weight?: number;
+  kcal?: number;
+  carbs?: number;
+  protein?: number;
+  fat?: number;
+  sodium?: number;
 };
 
 export type Recipe = {
@@ -53,9 +66,19 @@ export type Recipe = {
   tags: DietTag[];
   difficulty: Difficulty;
   minutes: number;
+  /** 원본에 조리 시간이 없어 단계 수로 추정한 값이면 true */
+  minutesEstimated?: boolean;
   servings: number;
   ingredients: RecipeIngredient[];
   steps: RecipeStep[];
+  /** 완성 사진 주소. 없으면 앱에 들어 있는 사진(assets)이나 아이콘을 쓴다 */
+  imageUrl?: string;
+  thumbUrl?: string;
+  nutrition?: Nutrition;
+  /** 저감 조리 팁 */
+  tip?: string;
+  /** 없으면 앱에 들어 있는 샘플 레시피 */
+  source?: 'foodsafety';
 };
 
 export type CookLog = {

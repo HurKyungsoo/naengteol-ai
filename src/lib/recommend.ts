@@ -1,4 +1,4 @@
-import { normalizeIngredient, substitutesFor } from '@/lib/ingredients';
+import { hasIngredient, normalizeIngredient, substitutesFor } from '@/lib/ingredients';
 import type { Cuisine, Diet, PantryItem, Preferences, Recipe, RecipeIngredient } from '@/types';
 
 export type MissingIngredient = {
@@ -46,12 +46,10 @@ export function matchRecipe(recipe: Recipe, owned: Set<string>): RecipeMatch {
   const missing: MissingIngredient[] = [];
 
   for (const ingredient of coreIngredients(recipe)) {
-    if (owned.has(normalizeIngredient(ingredient.name))) {
+    if (hasIngredient(owned, ingredient.name)) {
       have.push(ingredient);
     } else {
-      const availableSubstitutes = substitutesFor(ingredient.name).filter((s) =>
-        owned.has(normalizeIngredient(s)),
-      );
+      const availableSubstitutes = substitutesFor(ingredient.name).filter((s) => hasIngredient(owned, s));
       missing.push({ ingredient, availableSubstitutes });
     }
   }

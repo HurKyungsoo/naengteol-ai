@@ -4,6 +4,7 @@ import { View } from 'react-native';
 
 import { Intro } from '@/components/Intro';
 import { AppStateProvider, useAppState } from '@/state/AppState';
+import { RecipesProvider } from '@/state/RecipesProvider';
 import { colors } from '@/theme';
 
 function AppShell() {
@@ -26,8 +27,10 @@ function AppShell() {
 export default function RootLayout() {
   return (
     <AppStateProvider>
-      <StatusBar style="dark" />
-      <AppShell />
+      <RecipesProvider>
+        <StatusBar style="dark" />
+        <AppShell />
+      </RecipesProvider>
     </AppStateProvider>
   );
 }

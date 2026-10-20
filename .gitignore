@@ -41,3 +41,4 @@ yarn-error.*
 /android
 .expo-dev.log
 .env
+scripts/out/

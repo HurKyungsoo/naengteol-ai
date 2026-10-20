@@ -9,8 +9,8 @@ import { BottomBar, PrimaryButton } from '@/components/PrimaryButton';
 import { RecipeImage } from '@/components/RecipeImage';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { SegmentTabs } from '@/components/Tabs';
-import { findRecipe } from '@/data/recipes';
 import { useAppState } from '@/state/AppState';
+import { useRecipes } from '@/state/RecipesProvider';
 import { colors, radius, spacing } from '@/theme';
 import type { PantryItem } from '@/types';
 
@@ -24,6 +24,7 @@ function formatDate(ts: number): string {
 export default function PantryScreen() {
   const params = useLocalSearchParams<{ tab?: Tab }>();
   const { pantry, cookLogs } = useAppState();
+  const { findRecipe } = useRecipes();
   const [tab, setTab] = useState<Tab>(params.tab ?? 'owned');
   const [editing, setEditing] = useState<PantryItem | null>(null);
 

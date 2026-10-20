@@ -552,7 +552,3 @@ export const RECIPES: Recipe[] = [
     ],
   },
 ];
-
-export function findRecipe(id: string): Recipe | undefined {
-  return RECIPES.find((recipe) => recipe.id === id);
-}

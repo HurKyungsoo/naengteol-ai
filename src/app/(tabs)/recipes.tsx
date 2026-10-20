@@ -6,9 +6,9 @@ import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { RecipeListItem } from '@/components/RecipeListItem';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { FilterPills } from '@/components/Tabs';
-import { RECIPES } from '@/data/recipes';
 import { matchesTab, pantryNameSet, recommendRecipes } from '@/lib/recommend';
 import { useAppState } from '@/state/AppState';
+import { useRecipes } from '@/state/RecipesProvider';
 import { colors, radius, spacing } from '@/theme';
 import { CUISINES, DIETS, type Cuisine } from '@/types';
 
@@ -16,10 +16,11 @@ type Tab = 'all' | Cuisine;
 
 export default function RecipesScreen() {
   const { pantry, preferences } = useAppState();
+  const { recipes } = useRecipes();
   const [tab, setTab] = useState<Tab>('all');
 
   const owned = useMemo(() => pantryNameSet(pantry), [pantry]);
-  const matches = useMemo(() => recommendRecipes(RECIPES, pantry, preferences), [pantry, preferences]);
+  const matches = useMemo(() => recommendRecipes(recipes, pantry, preferences), [recipes, pantry, preferences]);
   const visible = matches.filter((m) => matchesTab(m.recipe, tab === 'all' ? undefined : tab));
 
   const conditions = [

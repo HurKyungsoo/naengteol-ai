@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { RecipeImage } from '@/components/RecipeImage';
-import { normalizeIngredient } from '@/lib/ingredients';
+import { hasIngredient } from '@/lib/ingredients';
 import { coreIngredients } from '@/lib/recommend';
 import { useAppState } from '@/state/AppState';
 import { colors, radius, spacing } from '@/theme';
@@ -20,7 +20,7 @@ export function RecipeListItem({ recipe, owned, compact = false }: Props) {
   const { favorites, toggleFavorite } = useAppState();
   const isFavorite = favorites.includes(recipe.id);
   const core = coreIngredients(recipe);
-  const missing = core.filter((i) => !owned.has(normalizeIngredient(i.name))).length;
+  const missing = core.filter((i) => !hasIngredient(owned, i.name)).length;
 
   return (
     <Pressable
@@ -45,7 +45,7 @@ export function RecipeListItem({ recipe, owned, compact = false }: Props) {
         {!compact && (
           <View style={styles.tags}>
             {core.slice(0, 3).map((i) => {
-              const has = owned.has(normalizeIngredient(i.name));
+              const has = hasIngredient(owned, i.name);
               return (
                 <Text key={i.name} style={[styles.tag, !has && styles.tagMissing]}>
                   {i.name}

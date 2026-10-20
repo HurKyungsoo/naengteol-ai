@@ -7,23 +7,24 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { IngredientIcon } from '@/components/IngredientIcon';
 import { RecipeImage } from '@/components/RecipeImage';
 import { DotsIcon } from '@/components/ScreenHeader';
-import { findRecipe, RECIPES } from '@/data/recipes';
 import { recommendRecipes } from '@/lib/recommend';
 import { useAppState } from '@/state/AppState';
+import { useRecipes } from '@/state/RecipesProvider';
 import { colors, radius, spacing } from '@/theme';
 import { DIETS, type Diet, type Recipe } from '@/types';
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { pantry, recentViewed, preferences, addIngredient, setPreferences } = useAppState();
+  const { recipes, findRecipe } = useRecipes();
   const [text, setText] = useState('');
 
   const recent = recentViewed.flatMap((id) => findRecipe(id) ?? []);
   const suggested = useMemo(
-    () => recommendRecipes(RECIPES, pantry, { preferOwned: true }).map((m) => m.recipe),
-    [pantry],
+    () => recommendRecipes(recipes, pantry, { preferOwned: true }).map((m) => m.recipe),
+    [recipes, pantry],
   );
-  const shelf: Recipe[] = recent.length > 0 ? recent : suggested.length > 0 ? suggested : RECIPES;
+  const shelf: Recipe[] = recent.length > 0 ? recent : suggested.length > 0 ? suggested : recipes;
 
   const submit = () => {
     const names = text.split(/[,\s]+/).filter(Boolean);

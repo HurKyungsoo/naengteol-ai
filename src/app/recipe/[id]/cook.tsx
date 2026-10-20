@@ -9,10 +9,10 @@ import { BottomBar, PrimaryButton } from '@/components/PrimaryButton';
 import { RecipeImage } from '@/components/RecipeImage';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import type { IconName } from '@/data/assets';
-import { findRecipe } from '@/data/recipes';
 import { ingredientIcon } from '@/lib/icons';
 import { normalizeIngredient, substitutesFor } from '@/lib/ingredients';
 import { useAppState } from '@/state/AppState';
+import { useRecipes } from '@/state/RecipesProvider';
 import { colors, radius, spacing } from '@/theme';
 import type { Recipe, RecipeStep } from '@/types';
 
@@ -29,6 +29,7 @@ function stepIcon(recipe: Recipe, step: RecipeStep): IconName | undefined {
 export default function CookScreen() {
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { findRecipe } = useRecipes();
   const recipe = findRecipe(id);
   const { pantry, completeCooking } = useAppState();
   const [done, setDone] = useState<Set<number>>(new Set());

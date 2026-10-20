@@ -5,14 +5,15 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { IngredientIcon } from '@/components/IngredientIcon';
 import { BottomBar, PrimaryButton } from '@/components/PrimaryButton';
 import { goBack, ScreenHeader } from '@/components/ScreenHeader';
-import { findRecipe } from '@/data/recipes';
-import { normalizeIngredient, substitutesFor } from '@/lib/ingredients';
+import { hasIngredient, substitutesFor } from '@/lib/ingredients';
 import { matchRecipe, pantryNameSet } from '@/lib/recommend';
 import { useAppState } from '@/state/AppState';
+import { useRecipes } from '@/state/RecipesProvider';
 import { colors, radius, spacing } from '@/theme';
 
 export default function SubstitutesScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { findRecipe } = useRecipes();
   const recipe = findRecipe(id);
   const { pantry, addIngredient } = useAppState();
   const owned = useMemo(() => pantryNameSet(pantry), [pantry]);
@@ -61,7 +62,7 @@ export default function SubstitutesScreen() {
                 {options.length > 0 && (
                   <View style={styles.grid}>
                     {options.map((name) => {
-                      const has = owned.has(normalizeIngredient(name));
+                      const has = hasIngredient(owned, name);
                       return (
                         <View key={name} style={styles.option}>
                           <IngredientIcon name={name} size={44} />

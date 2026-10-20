@@ -5,9 +5,9 @@ import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { RecipeListItem } from '@/components/RecipeListItem';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { FilterPills } from '@/components/Tabs';
-import { findRecipe } from '@/data/recipes';
 import { matchesTab, pantryNameSet } from '@/lib/recommend';
 import { useAppState } from '@/state/AppState';
+import { useRecipes } from '@/state/RecipesProvider';
 import { colors, radius, spacing } from '@/theme';
 import type { Cuisine, Diet } from '@/types';
 
@@ -23,6 +23,7 @@ const TABS: { value: Tab; label: string }[] = [
 
 export default function FavoritesScreen() {
   const { favorites, pantry } = useAppState();
+  const { findRecipe } = useRecipes();
   const [tab, setTab] = useState<Tab>('all');
   const owned = useMemo(() => pantryNameSet(pantry), [pantry]);
 

@@ -12,6 +12,9 @@ const DEFAULT_ANALYZE_URL = 'https://qxzeuxidlotgzbhcqugj.supabase.co/functions/
 /** Supabase publishable 키. 브라우저·앱에 노출돼도 되는 공개 키다. */
 const DEFAULT_SUPABASE_KEY = 'sb_publishable_lePZzAL-l59kb3GPJfj4sA_HfaHVIYy';
 
+/** Supabase 프로젝트 주소 (레시피 DB 조회) */
+export const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://qxzeuxidlotgzbhcqugj.supabase.co';
+
 const analyzeUrl = process.env.EXPO_PUBLIC_ANALYZE_URL || DEFAULT_ANALYZE_URL;
 
 /** 사진 분석 서버 주소. 데모 모드면 undefined. */
