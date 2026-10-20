@@ -2,8 +2,10 @@
  * 냉장고 사진에서 재료 후보를 찾는다.
  *
  * Gemini API 키를 앱에 넣지 않기 위해 Supabase Edge Function(supabase/functions/analyze-fridge)을 거쳐 호출한다.
- * EXPO_PUBLIC_ANALYZE_URL 이 없으면 데모 결과를 돌려주고, 화면에서 데모임을 표시한다.
+ * 서버 주소는 src/config.ts 에 있고, 데모 모드(EXPO_PUBLIC_ANALYZE_URL=demo)면 데모 결과를 돌려준다.
  */
+
+import { ANALYZE_URL, SUPABASE_KEY } from '@/config';
 
 export type DetectedIngredient = {
   name: string;
@@ -16,9 +18,9 @@ export type AnalyzeResult = {
   demo: boolean;
 };
 
-const ENDPOINT = process.env.EXPO_PUBLIC_ANALYZE_URL;
+const ENDPOINT = ANALYZE_URL;
 /** Supabase publishable 키. 공개돼도 되는 키이며, 서버 함수가 APP_KEY와 비교해 앱의 요청인지 확인한다. */
-const APP_KEY = process.env.EXPO_PUBLIC_SUPABASE_KEY;
+const APP_KEY = SUPABASE_KEY;
 const TIMEOUT_MS = 30_000;
 
 const ERROR_MESSAGES: Record<number, string> = {

@@ -75,7 +75,7 @@ npx supabase functions deploy analyze-fridge
 
 - 모델 기본값은 `gemini-3.5-flash-lite`. 바꾸려면 `GEMINI_MODEL` secret을 설정한다.
 - 함수는 `apikey` 헤더가 `APP_KEY`와 같을 때만 응답하고, 이미지 약 2MB 제한과 분당 10회 호출 제한이 있다.
-- 그다음 `.env.example`을 `.env`로 복사해 함수 주소와 publishable 키를 채우고 `npx expo start`를 다시 실행한다.
+- 앱이 호출할 함수 주소와 publishable 키(둘 다 공개 값)는 `src/config.ts`에 있어서 **`.env` 없이 바로 실행된다.** 다른 서버를 쓰거나 데모로 돌릴 때만 `.env`로 덮어쓴다 (`EXPO_PUBLIC_ANALYZE_URL=demo`).
 
 ## 진행 상황 (기획서 9장 MVP 범위 기준)
 
