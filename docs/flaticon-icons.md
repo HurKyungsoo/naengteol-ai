@@ -1,6 +1,6 @@
 # Flaticon 재료 아이콘 다운로드 목록
 
-스타일: **Special Flat** (작가: Magnific/Freepik) · 57개
+스타일: **Special Flat** (작가: Magnific/Freepik) · 87개
 
 ## 받는 방법
 1. 아래 링크를 열고 **PNG · 512px**로 다운로드한다. (로그인 필요, 무료 회원은 하루 다운로드 수 제한이 있다)
