@@ -9,3 +9,5 @@ verify_jwt = false
 
 [functions.explain-recipe]
 verify_jwt = false
+[functions.find-video]
+verify_jwt = false

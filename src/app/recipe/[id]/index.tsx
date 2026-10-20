@@ -8,8 +8,10 @@ import { GuideSection } from '@/components/GuideSection';
 import { IngredientIcon } from '@/components/IngredientIcon';
 import { BottomBar, PrimaryButton } from '@/components/PrimaryButton';
 import { RecipeImage } from '@/components/RecipeImage';
+import { RecipeVideoCard } from '@/components/RecipeVideoCard';
 import { goBack, ScreenHeader } from '@/components/ScreenHeader';
 import { useRecipeGuide } from '@/lib/guide';
+import { useRecipeVideo } from '@/lib/video';
 import { hasIngredient } from '@/lib/ingredients';
 import { formatMinutes, matchRecipe, pantryNameSet } from '@/lib/recommend';
 import { useAppState } from '@/state/AppState';
@@ -27,6 +29,7 @@ export default function RecipeDetailScreen() {
   const owned = useMemo(() => pantryNameSet(pantry), [pantry]);
   const match = useMemo(() => (recipe ? matchRecipe(recipe, owned) : undefined), [recipe, owned]);
   const guide = useRecipeGuide(recipe);
+  const video = useRecipeVideo(recipe);
 
   useEffect(() => {
     if (recipe) markViewed(recipe.id);
@@ -90,6 +93,7 @@ export default function RecipeDetailScreen() {
           {guide.available && (
             <GuideSection guide={guide.guide} loading={guide.loading} error={guide.error} onRequest={guide.request} />
           )}
+          {video && <RecipeVideoCard video={video} />}
 
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>필요한 재료</Text>
