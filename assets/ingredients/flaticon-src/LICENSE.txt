@@ -48,10 +48,10 @@ flatbread       또띠아        https://www.flaticon.com/free-icon/tortillas_51
 noodles         면          https://www.flaticon.com/free-icon/noodles_1046799
 ginger          생강         https://www.flaticon.com/free-icon/ginger_381089
 bowl            기타(그릇)     https://www.flaticon.com/free-icon/porridge_8937785
-pot-of-food     한식(카테고리)   https://www.flaticon.com/free-icon/boiling_1761437
+pot-of-food     육수           https://www.flaticon.com/free-icon/boiling_1761437
 green-salad     다이어트식(카테고리) https://www.flaticon.com/free-icon/salad_1057357
 cooking         자취요리(카테고리) https://www.flaticon.com/free-icon/pan_2702519
-coin            저예산(카테고리)  https://www.flaticon.com/free-icon/dollar_1490853
+coin            저예산(카테고리)  https://www.flaticon.com/free-icon/won_1999583
 stopwatch       빠른조리(카테고리) https://www.flaticon.com/free-icon/stopwatch_2055568
 kimchi          김치         https://www.flaticon.com/free-icon/kimchi_12971418
 green-onion     대파         https://www.flaticon.com/free-icon/leek_5346195
@@ -93,3 +93,4 @@ curry           카레         https://www.flaticon.com/free-icon/kare-raisu_397
 kiwi            키위         https://www.flaticon.com/free-icon/kiwi_3012377
 ginseng         인삼         https://www.flaticon.com/free-icon/ginseng_4498477
 cinnamon        계피         https://www.flaticon.com/free-icon/cinnamon_1652100
+korean-food     한식(카테고리)   https://www.flaticon.com/free-icon/hot_2515249

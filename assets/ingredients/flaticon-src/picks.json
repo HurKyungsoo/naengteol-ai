@@ -253,7 +253,7 @@
  },
  {
   "key": "pot-of-food",
-  "label": "한식(카테고리)",
+  "label": "육수",
   "id": "1761437",
   "url": "https://www.flaticon.com/free-icon/boiling_1761437"
  },
@@ -272,8 +272,8 @@
  {
   "key": "coin",
   "label": "저예산(카테고리)",
-  "id": "1490853",
-  "url": "https://www.flaticon.com/free-icon/dollar_1490853"
+  "id": "1999583",
+  "url": "https://www.flaticon.com/free-icon/won_1999583"
  },
  {
   "key": "stopwatch",
@@ -520,5 +520,11 @@
   "label": "계피",
   "id": "1652100",
   "url": "https://www.flaticon.com/free-icon/cinnamon_1652100"
+ },
+ {
+  "key": "korean-food",
+  "label": "한식(카테고리)",
+  "id": "2515249",
+  "url": "https://www.flaticon.com/free-icon/hot_2515249"
  }
 ]

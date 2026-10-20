@@ -11,7 +11,7 @@ export type DietTag = '다이어트' | '고단백' | '자취' | '저예산';
 export type Diet = '한식' | DietTag | '빠른조리';
 
 export const DIETS: { id: Diet; label: string; icon: IconName }[] = [
-  { id: '한식', label: '한식', icon: 'pot-of-food' },
+  { id: '한식', label: '한식', icon: 'korean-food' },
   { id: '다이어트', label: '다이어트식', icon: 'green-salad' },
   { id: '고단백', label: '고단백', icon: 'poultry-leg' },
   { id: '자취', label: '자취요리', icon: 'cooking' },
