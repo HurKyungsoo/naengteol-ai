@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { RecipeImage } from '@/components/RecipeImage';
 import { hasIngredient } from '@/lib/ingredients';
-import { coreIngredients } from '@/lib/recommend';
+import { coreIngredients, formatMinutes } from '@/lib/recommend';
 import { useAppState } from '@/state/AppState';
 import { colors, radius, spacing } from '@/theme';
 import type { Recipe } from '@/types';
@@ -33,7 +33,7 @@ export function RecipeListItem({ recipe, owned, compact = false }: Props) {
         </Text>
         <View style={styles.meta}>
           <Ionicons name="time-outline" size={13} color={colors.textMuted} />
-          <Text style={styles.metaText}>{recipe.minutes}분</Text>
+          <Text style={styles.metaText}>{formatMinutes(recipe)}</Text>
           <Text style={styles.metaDot}>·</Text>
           <Text style={styles.metaText}>{recipe.difficulty}</Text>
           {!compact && (

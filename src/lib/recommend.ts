@@ -19,6 +19,11 @@ export type RecipeMatch = {
 
 const QUICK_MINUTES = 15;
 
+/** "약 35분"처럼 추정값이면 "약"을 붙인다 */
+export function formatMinutes(recipe: Pick<Recipe, 'minutes' | 'minutesEstimated'>): string {
+  return `${recipe.minutesEstimated ? '약 ' : ''}${recipe.minutes}분`;
+}
+
 /** 기본 양념과 선택 재료를 뺀, 레시피를 만드는 데 꼭 필요한 재료 */
 export function coreIngredients(recipe: Recipe): RecipeIngredient[] {
   return recipe.ingredients.filter((i) => !i.seasoning && !i.optional);

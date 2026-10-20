@@ -9,11 +9,11 @@ import { BottomBar, PrimaryButton } from '@/components/PrimaryButton';
 import { RecipeImage } from '@/components/RecipeImage';
 import { goBack, ScreenHeader } from '@/components/ScreenHeader';
 import { hasIngredient } from '@/lib/ingredients';
-import { matchRecipe, pantryNameSet } from '@/lib/recommend';
+import { formatMinutes, matchRecipe, pantryNameSet } from '@/lib/recommend';
 import { useAppState } from '@/state/AppState';
 import { useRecipes } from '@/state/RecipesProvider';
 import { colors, radius, shadow, spacing } from '@/theme';
-import type { RecipeIngredient } from '@/types';
+import type { Nutrition, RecipeIngredient } from '@/types';
 
 export default function RecipeDetailScreen() {
   const insets = useSafeAreaInsets();
@@ -46,7 +46,7 @@ export default function RecipeDetailScreen() {
 
   const share = async () => {
     const lines = [
-      `[냉털AI] ${recipe.title} (${recipe.minutes}분 · ${recipe.difficulty})`,
+      `[냉털AI] ${recipe.title} (${formatMinutes(recipe)} · ${recipe.difficulty})`,
       `재료: ${main.map((i) => `${i.name} ${i.amount}`).join(', ')}`,
       ...recipe.steps.map((s, i) => `${i + 1}. ${s.text}`),
     ];
@@ -61,7 +61,7 @@ export default function RecipeDetailScreen() {
     <View style={styles.screen}>
       <ScrollView contentContainerStyle={styles.scroll}>
         <View>
-          <RecipeImage recipe={recipe} width="100%" height={280 + insets.top} radius={0} />
+          <RecipeImage recipe={recipe} width="100%" height={280 + insets.top} radius={0} size="full" />
           <View style={[styles.heroBar, { top: insets.top + spacing.sm }]}>
             <CircleButton icon="chevron-back" label="뒤로" onPress={goBack} />
             <View style={styles.heroRight}>
@@ -79,7 +79,7 @@ export default function RecipeDetailScreen() {
         <View style={styles.body}>
           <Text style={styles.title}>{recipe.title}</Text>
           <View style={styles.meta}>
-            <Meta icon="time-outline" text={`${recipe.minutes}분`} />
+            <Meta icon="time-outline" text={formatMinutes(recipe)} />
             <Meta icon="bar-chart-outline" text={recipe.difficulty} />
             <Meta icon="person-outline" text={`${recipe.servings}인분`} />
           </View>
@@ -120,6 +120,25 @@ export default function RecipeDetailScreen() {
               </View>
             </>
           )}
+
+          {recipe.nutrition && <NutritionCard nutrition={recipe.nutrition} />}
+
+          {recipe.tip && (
+            <>
+              <Text style={[styles.sectionTitle, styles.subSection]}>저감 조리 팁</Text>
+              <View style={styles.tipCard}>
+                <Ionicons name="leaf-outline" size={16} color={colors.success} />
+                <Text style={styles.tipText}>{recipe.tip}</Text>
+              </View>
+            </>
+          )}
+
+          {recipe.source === 'foodsafety' && (
+            <Text style={styles.source}>
+              레시피·영양정보 출처: 식품의약품안전처 식품안전나라{'\n'}
+              조리 시간과 난이도는 원본에 없어 추정한 값이에요.
+            </Text>
+          )}
         </View>
       </ScrollView>
       <BottomBar>
@@ -147,6 +166,41 @@ function CircleButton({
     <Pressable style={styles.circle} onPress={onPress} hitSlop={6} accessibilityRole="button" accessibilityLabel={label}>
       <Ionicons name={icon} size={20} color={color} />
     </Pressable>
+  );
+}
+
+const NUTRIENTS: { key: keyof Nutrition; label: string; unit: string }[] = [
+  { key: 'kcal', label: '열량', unit: 'kcal' },
+  { key: 'carbs', label: '탄수화물', unit: 'g' },
+  { key: 'protein', label: '단백질', unit: 'g' },
+  { key: 'fat', label: '지방', unit: 'g' },
+  { key: 'sodium', label: '나트륨', unit: 'mg' },
+];
+
+/** 원본 데이터에 있는 값만 보여준다. 근거 없는 값은 만들지 않는다 (기획서 7-2). */
+function NutritionCard({ nutrition }: { nutrition: Nutrition }) {
+  const items = NUTRIENTS.filter((n) => nutrition[n.key] !== undefined);
+  if (items.length === 0) return null;
+  return (
+    <>
+      <View style={[styles.sectionHeader, styles.subSection]}>
+        <Text style={styles.sectionTitle}>영양정보</Text>
+        <Text style={styles.nutritionBasis}>
+          1인분{nutrition.weight ? ` ${Math.round(nutrition.weight)}g` : ''} 기준
+        </Text>
+      </View>
+      <View style={styles.nutrition}>
+        {items.map((n) => (
+          <View key={n.key} style={styles.nutrient}>
+            <Text style={styles.nutrientValue}>
+              {Math.round(nutrition[n.key] as number)}
+              <Text style={styles.nutrientUnit}>{n.unit}</Text>
+            </Text>
+            <Text style={styles.nutrientLabel}>{n.label}</Text>
+          </View>
+        ))}
+      </View>
+    </>
   );
 }
 
@@ -335,5 +389,55 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     color: colors.accent,
+  },
+  nutritionBasis: {
+    fontSize: 12,
+    color: colors.textMuted,
+  },
+  nutrition: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    borderRadius: radius.lg,
+    backgroundColor: colors.surfaceMuted,
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.sm,
+  },
+  nutrient: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 2,
+  },
+  nutrientValue: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  nutrientUnit: {
+    fontSize: 11,
+    fontWeight: '400',
+    color: colors.textMuted,
+  },
+  nutrientLabel: {
+    fontSize: 12,
+    color: colors.textMuted,
+  },
+  tipCard: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    padding: spacing.lg,
+    borderRadius: radius.lg,
+    backgroundColor: colors.successSoft,
+  },
+  tipText: {
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 20,
+    color: colors.text,
+  },
+  source: {
+    marginTop: spacing.xl,
+    fontSize: 11,
+    lineHeight: 17,
+    color: colors.textMuted,
   },
 });

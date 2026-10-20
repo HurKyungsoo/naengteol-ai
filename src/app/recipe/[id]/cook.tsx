@@ -99,9 +99,16 @@ export default function CookScreen() {
                 {!last && <View style={styles.line} />}
               </View>
               <View style={[styles.card, isDone && styles.cardDone]}>
-                <RecipeImage recipe={recipe} icon={stepIcon(recipe, step)} width={72} height={72} radius={radius.md} />
+                <RecipeImage
+                  recipe={recipe}
+                  imageUri={step.image}
+                  icon={step.image ? undefined : stepIcon(recipe, step)}
+                  width={72}
+                  height={72}
+                  radius={radius.md}
+                />
                 <View style={styles.cardBody}>
-                  <Text style={styles.stepTitle}>{step.title}</Text>
+                  {step.title && <Text style={styles.stepTitle}>{step.title}</Text>}
                   <Text style={styles.stepText}>{step.text}</Text>
                 </View>
               </View>

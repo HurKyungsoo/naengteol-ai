@@ -95,12 +95,23 @@ npx supabase functions deploy analyze-fridge
 - [x] 사진 분석 서버 배포 (`supabase/functions/analyze-fridge`, Supabase 서울 리전, `.env` 설정 시 실제 분석)
 - [x] 추가 재료(기본 양념) 및 대체 재료 안내
 - [x] 재료 소진 처리와 조리 기록
-- [ ] 영양정보 표시 (근거 있는 데이터를 확보한 경우에만)
+- [x] 영양정보 표시 (식품안전나라 원본의 1인분 값만)
 - [ ] 회원 계정과 기기 간 데이터 동기화 (Supabase Auth + 기획서 8장 테이블)
 
 **데이터**
 - [x] 레시피 사진 (Unsplash), 재료 3D 아이콘 (Fluent Emoji + 직접 그린 한식 재료)
-- [ ] 레시피 100~300개 확보 (현재 샘플 21개, 공공데이터 등 이용 조건이 명확한 자료로)
+- [x] 레시피 100~300개 확보 → 공공 레시피 1,151개 + 샘플 21개 (Supabase DB, 기기 캐시)
+
+## 공공 레시피 데이터 (식품안전나라)
+
+식품의약품안전처 식품안전나라 "조리식품의 레시피 DB"(COOKRCP01) 1,151개를 Supabase `recipes` 테이블에 넣어 쓴다.
+앱은 처음 실행할 때 받아 기기에 저장하고(약 2MB), 하루에 한 번 새로 받는다. 서버에 연결할 수 없으면 앱에 들어 있는 샘플 21개로 동작한다.
+
+- 이용 조건: **출처 표시 조건으로 자유이용** (공공데이터활용 이용약관 제10조). 앱 상세 화면과 출처 화면에 표시한다. 데이터 내용은 바꾸지 않는다.
+- 원본에 없는 **조리 시간·난이도는 추정값**이라 "약 N분"으로 표시한다. 영양정보는 원본의 1인분 값만 쓴다.
+- 테이블 만들기 (처음 한 번): `npx supabase db query --linked --project-ref <ref> -f supabase/migrations/20261020000000_recipes.sql`
+- 데이터 갱신: `.env`에 `FOODSAFETY_API_KEY`를 넣고 `node scripts/import-recipes.mjs`로 변환 결과를 확인한 뒤 `--apply`로 적용한다.
+- 재료 글("연두부 75g(3/4모), 칵테일새우 20g")은 스크립트가 재료명·분량·양념 여부로 나눈다. 규칙은 `scripts/import-recipes.mjs`의 `parseIngredients`.
 
 ## 이미지 출처
 

@@ -25,7 +25,9 @@ const CONTENT = {
   credits: {
     title: '사진·아이콘 출처',
     body:
-      '레시피 사진은 Unsplash 라이선스로 제공된 사진이에요.\n' +
+      '공공 레시피(사진·조리법·영양정보)는 식품의약품안전처 식품안전나라 "조리식품의 레시피 DB"에서 제공받았어요. ' +
+      '조리 시간과 난이도는 원본에 없어 앱에서 추정한 값이에요.\n\n' +
+      '샘플 레시피 사진은 Unsplash 라이선스로 제공된 사진이에요.\n' +
       '재료 아이콘은 Microsoft Fluent Emoji (MIT License, Copyright (c) Microsoft Corporation)를 사용했어요.',
   },
 };

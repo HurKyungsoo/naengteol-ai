@@ -16,6 +16,7 @@ import path from 'node:path';
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname.replace(/^\/(\w:)/, '$1')), '..');
 const OUT_DIR = path.join(ROOT, 'scripts', 'out');
 const APPLY = process.argv.includes('--apply');
+const PROJECT_REF = process.env.SUPABASE_PROJECT_REF || 'qxzeuxidlotgzbhcqugj';
 
 function readEnv(file) {
   if (!fs.existsSync(file)) return {};
@@ -57,7 +58,8 @@ const SEASONINGS = new Set(
   (
     '소금 굵은소금 꽃소금 설탕 흑설탕 간장 진간장 국간장 양조간장 저염간장 참기름 들기름 식초 사과식초 현미식초 ' +
     '후추 후춧가루 후추가루 흰후추 물 식용유 포도씨유 카놀라유 올리브유 올리브오일 해바라기유 깨 통깨 참깨 깨소금 ' +
-    '다진마늘 마늘 다진생강 생강즙 고춧가루 맛술 미림 청주 올리고당 물엿 조청 매실액 매실청 소금물'
+    '다진마늘 마늘 다진생강 생강즙 고춧가루 맛술 미림 청주 올리고당 물엿 조청 매실액 매실청 소금물 ' +
+    '저염간장 저염소금 흰설탕 황설탕 갈색설탕 굵은고춧가루 고운고춧가루'
   ).split(' '),
 );
 const PRICEY = /소고기|쇠고기|한우|등심|안심|갈비|새우|전복|연어|장어|낙지|문어|대게|랍스터|관자|가리비|굴비|장어/;
@@ -94,7 +96,22 @@ function parseItem(part, ctx) {
   const cleaned = part.replace(/^[•·\-*●○]\s*/, '').trim();
   // 이름 = 첫 숫자 / "약간" / "적당량" / 괄호 앞까지, 분량 = 나머지
   const m = cleaned.match(/^(.+?)\s*((?:약\s*)?[\d½¼¾⅓⅔]+.*|약간.*|적당량.*|적당히.*|조금.*|소량.*|\(.*)$/);
-  let name = (m ? m[1] : cleaned).replace(/\(.*?\)/g, '').replace(/[:：]/g, '').trim();
+  let name = (m ? m[1] : cleaned)
+    .replace(/<[^>]*>/g, '') // 원본에 섞인 <br>
+    .replace(/\[[^\]]*\]/g, '') // [양념]
+    .replace(/\(.*?\)/g, '')
+    .replace(/[:：]/g, '')
+    .trim();
+  // "밀푀유 재료 > 박력 밀가루" → "박력 밀가루"
+  if (name.includes('>')) name = name.slice(name.lastIndexOf('>') + 1).trim();
+  // "쇠고기 양념장 생강즙", "닭고기 삶는 재료 된장", "재료 물" → 분류명 뒤의 재료만
+  const prefixed = name.match(/^(.*(?:양념장?|재료|드레싱|소스))\s+(\S.*)$/);
+  if (prefixed) {
+    if (/양념|드레싱|소스/.test(prefixed[1])) ctx = 'seasoning';
+    name = prefixed[2].trim();
+  }
+  // "양파다진것" → "양파"
+  name = name.replace(/\s*다진\s*것$/, '');
   const amount = (m ? m[2] : '').trim() || '적당량';
   if (!name || name.length > 20 || /^\d/.test(name)) return undefined;
   name = name.replace(/\s{2,}/g, ' ');
@@ -128,6 +145,12 @@ function parseIngredients(raw, title) {
       line = header[2];
     }
     line = line.replace(/^(주재료|부재료|재료)\s+/, '');
+    // 콜론 없이 분류명이 앞에 붙은 줄: "양념 참기름 5g, ...", "시금치우유 소스 우유 100g"
+    const inlineHeader = line.match(/^(\S*(?:양념장?|소스|드레싱|국물|육수|고명|토핑))\s+(.+)$/);
+    if (!header && inlineHeader && /\d|약간|적당량/.test(inlineHeader[2])) {
+      lineCtx = contextOf(inlineHeader[1]);
+      line = inlineHeader[2];
+    }
     for (const part of splitItems(line)) {
       const item = parseItem(part, lineCtx);
       if (!item || seen.has(compact(item.name))) continue;
@@ -157,9 +180,11 @@ const num = (v) => {
   return Number.isFinite(x) ? x : undefined;
 };
 
-function estimateMinutes(steps) {
+// 원본에 조리 시간이 없어 추정한다: 손질 기본 시간 + 단계 수 + 재료 수 + 설명에 적힌 "N분" + 조리법별 시간
+const METHOD_MINUTES = { 끓이기: 10, 찌기: 8, 굽기: 6, 튀기기: 6, 볶기: 3, 기타: 3 };
+function estimateMinutes(steps, coreCount, method) {
   const explicit = steps.reduce((sum, s) => sum + [...s.text.matchAll(/(\d+)\s*분/g)].reduce((a, m) => a + Number(m[1]), 0), 0);
-  const estimate = Math.max(steps.length * 4, explicit + steps.length * 2);
+  const estimate = 5 + steps.length * 2 + coreCount + Math.min(explicit, 60) + (METHOD_MINUTES[method] ?? 0);
   return Math.min(90, Math.max(10, Math.round(estimate / 5) * 5));
 }
 
@@ -179,13 +204,15 @@ function transform(row) {
 
   const cuisine = row.RCP_PAT2 === '후식' ? '간식' : WESTERN.test(title) ? '양식' : CHINESE.test(title) ? '중식' : '한식';
   const tags = [];
-  if (nutrition.kcal !== undefined && nutrition.kcal <= 350) tags.push('다이어트');
+  // 공공 레시피는 대부분 저칼로리라 기준을 낮게 잡는다 (1인분 150kcal ≈ 하위 35%).
+  if (nutrition.kcal !== undefined && nutrition.kcal <= 150 && row.RCP_PAT2 !== '후식') tags.push('다이어트');
   if (nutrition.protein !== undefined && nutrition.protein >= 20) tags.push('고단백');
-  if (core.length <= 5 && steps.length <= 4) tags.push('자취');
+  if (core.length <= 5) tags.push('자취');
   if (core.length <= 6 && !PRICEY.test(core.map((i) => i.name).join(' '))) tags.push('저예산');
 
-  const score = steps.length + core.length / 2;
-  const difficulty = score <= 5 ? '쉬움' : score <= 8.5 ? '보통' : '어려움';
+  const minutes = estimateMinutes(steps, core.length, row.RCP_WAY2);
+  // 난이도도 원본에 없어 재료 수와 시간으로 추정한다.
+  const difficulty = core.length <= 6 && minutes <= 30 ? '쉬움' : core.length >= 11 || minutes >= 50 ? '어려움' : '보통';
   const summaryParts = [row.RCP_PAT2, row.RCP_WAY2].filter(Boolean);
   const hashTag = (row.HASH_TAG ?? '').trim();
 
@@ -198,7 +225,7 @@ function transform(row) {
     cuisine,
     tags,
     difficulty,
-    minutes: estimateMinutes(steps),
+    minutes,
     minutes_estimated: true,
     servings: 1,
     tint: '#F3EEE6',
@@ -264,7 +291,8 @@ if (APPLY) {
   for (let i = 0; i < recipes.length; i += CHUNK) {
     const file = path.join(OUT_DIR, `recipes-${String(i / CHUNK).padStart(2, '0')}.sql`);
     fs.writeFileSync(file, toSql(recipes.slice(i, i + CHUNK)));
-    execFileSync(process.platform === 'win32' ? 'npx.cmd' : 'npx', ['supabase', 'db', 'query', '--linked', '-f', file], {
+    const args = ['supabase', 'db', 'query', '--linked', '--project-ref', PROJECT_REF, '-f', file];
+    execFileSync(process.platform === 'win32' ? 'npx.cmd' : 'npx', args, {
       cwd: ROOT,
       stdio: ['ignore', 'ignore', 'inherit'],
       shell: process.platform === 'win32',
