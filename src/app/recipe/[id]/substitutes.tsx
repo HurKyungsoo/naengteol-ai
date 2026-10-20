@@ -74,7 +74,9 @@ export default function SubstitutesScreen() {
             {selected && (
               <>
                 <Text style={[styles.sectionTitle, styles.spaced]}>
-                  {options.length > 0
+                  {selected.main
+                    ? `${selected.ingredient.name}은(는) 이 요리의 주재료예요`
+                    : options.length > 0
                     ? `${selected.ingredient.name} 대신 이 재료로도 만들 수 있어요`
                     : selected.ingredient.optional
                       ? `${selected.ingredient.name}은(는) 선택 재료라 빼고 만들어도 돼요`
@@ -84,7 +86,8 @@ export default function SubstitutesScreen() {
                   <View style={styles.warning}>
                     <Ionicons name="alert-circle-outline" size={16} color={colors.accent} />
                     <Text style={styles.warningText}>
-                      요리 이름에 들어간 주재료라, 다른 재료로 바꾸면 맛이 많이 달라질 수 있어요.
+                      요리 이름에 들어간 재료라, 다른 재료로 바꾸면 다른 요리가 되기 쉬워요.
+                      {options.length > 0 ? ' 아래 재료는 참고만 해 주세요.' : ''}
                     </Text>
                   </View>
                 )}
