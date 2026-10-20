@@ -153,6 +153,7 @@ export const ICONS = {
   bowl: require('../../assets/ingredients/bowl.png'),
   'pot-of-food': require('../../assets/ingredients/pot-of-food.png'),
   'korean-food': require('../../assets/ingredients/korean-food.png'),
+  protein: require('../../assets/ingredients/protein.png'),
   'green-salad': require('../../assets/ingredients/green-salad.png'),
   cooking: require('../../assets/ingredients/cooking.png'),
   coin: require('../../assets/ingredients/coin.png'),

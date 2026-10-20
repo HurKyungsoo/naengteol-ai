@@ -1,6 +1,6 @@
 # Flaticon 재료 아이콘 다운로드 목록
 
-스타일: **Special Flat** (작가: Magnific/Freepik) · 88개
+스타일: **Special Flat** (작가: Magnific/Freepik) · 89개
 
 ## 받는 방법
 1. 아래 링크를 열고 **PNG · 512px**로 다운로드한다. (로그인 필요, 무료 회원은 하루 다운로드 수 제한이 있다)
@@ -57,7 +57,7 @@
 | `bowl.png` | 기타(그릇) | [porridge](https://www.flaticon.com/free-icon/porridge_8937785) |
 | `pot-of-food.png` | 육수 | [boiling](https://www.flaticon.com/free-icon/boiling_1761437) |
 | `green-salad.png` | 다이어트식(카테고리) | [salad](https://www.flaticon.com/free-icon/salad_1057357) |
-| `cooking.png` | 자취요리(카테고리) | [pan](https://www.flaticon.com/free-icon/pan_2702519) |
+| `cooking.png` | 자취요리(카테고리) | [oven](https://www.flaticon.com/free-icon/oven_2333537) |
 | `coin.png` | 저예산(카테고리) | [won](https://www.flaticon.com/free-icon/won_1999583) |
 | `stopwatch.png` | 빠른조리(카테고리) | [stopwatch](https://www.flaticon.com/free-icon/stopwatch_2055568) |
 | `kimchi.png` | 김치 | [kimchi](https://www.flaticon.com/free-icon/kimchi_12971418) |
@@ -101,3 +101,4 @@
 | `ginseng.png` | 인삼 | [ginseng](https://www.flaticon.com/free-icon/ginseng_4498477) |
 | `cinnamon.png` | 계피 | [cinnamon](https://www.flaticon.com/free-icon/cinnamon_1652100) |
 | `korean-food.png` | 한식(카테고리) | [hot](https://www.flaticon.com/free-icon/hot_2515249) |
+| `protein.png` | 고단백(카테고리) | [muscle](https://www.flaticon.com/free-icon/muscle_1599267) |

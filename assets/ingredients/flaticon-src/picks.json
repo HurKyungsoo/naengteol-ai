@@ -266,8 +266,8 @@
  {
   "key": "cooking",
   "label": "자취요리(카테고리)",
-  "id": "2702519",
-  "url": "https://www.flaticon.com/free-icon/pan_2702519"
+  "id": "2333537",
+  "url": "https://www.flaticon.com/free-icon/oven_2333537"
  },
  {
   "key": "coin",
@@ -526,5 +526,11 @@
   "label": "한식(카테고리)",
   "id": "2515249",
   "url": "https://www.flaticon.com/free-icon/hot_2515249"
+ },
+ {
+  "key": "protein",
+  "label": "고단백(카테고리)",
+  "id": "1599267",
+  "url": "https://www.flaticon.com/free-icon/muscle_1599267"
  }
 ]
