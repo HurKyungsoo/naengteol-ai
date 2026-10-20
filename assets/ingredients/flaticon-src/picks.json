@@ -1,0 +1,344 @@
+[
+ {
+  "key": "egg",
+  "label": "계란",
+  "id": "837560",
+  "url": "https://www.flaticon.com/free-icon/egg_837560"
+ },
+ {
+  "key": "cooked-rice",
+  "label": "밥",
+  "id": "2592747",
+  "url": "https://www.flaticon.com/free-icon/rice_2592747"
+ },
+ {
+  "key": "leafy-green",
+  "label": "상추·잎채소",
+  "id": "1515026",
+  "url": "https://www.flaticon.com/free-icon/lettuce_1515026"
+ },
+ {
+  "key": "onion",
+  "label": "양파",
+  "id": "1330443",
+  "url": "https://www.flaticon.com/free-icon/onion_1330443"
+ },
+ {
+  "key": "potato",
+  "label": "감자",
+  "id": "1652077",
+  "url": "https://www.flaticon.com/free-icon/potato_1652077"
+ },
+ {
+  "key": "sweet-potato",
+  "label": "고구마",
+  "id": "7230860",
+  "url": "https://www.flaticon.com/free-icon/sweet-potato_7230860"
+ },
+ {
+  "key": "bacon",
+  "label": "돼지고기",
+  "id": "1703038",
+  "url": "https://www.flaticon.com/free-icon/beef_1703038"
+ },
+ {
+  "key": "cut-of-meat",
+  "label": "소고기",
+  "id": "3268430",
+  "url": "https://www.flaticon.com/free-icon/steak_3268430"
+ },
+ {
+  "key": "poultry-leg",
+  "label": "닭고기",
+  "id": "4391772",
+  "url": "https://www.flaticon.com/free-icon/chicken_4391772"
+ },
+ {
+  "key": "canned-food",
+  "label": "참치캔",
+  "id": "405662",
+  "url": "https://www.flaticon.com/free-icon/canned-food_405662"
+ },
+ {
+  "key": "cucumber",
+  "label": "오이",
+  "id": "590781",
+  "url": "https://www.flaticon.com/free-icon/cucumber_590781"
+ },
+ {
+  "key": "eggplant",
+  "label": "가지",
+  "id": "4056868",
+  "url": "https://www.flaticon.com/free-icon/eggplant_4056868"
+ },
+ {
+  "key": "carrot",
+  "label": "당근",
+  "id": "381102",
+  "url": "https://www.flaticon.com/free-icon/carrot_381102"
+ },
+ {
+  "key": "hot-pepper",
+  "label": "고추",
+  "id": "1691043",
+  "url": "https://www.flaticon.com/free-icon/chili_1691043"
+ },
+ {
+  "key": "tomato",
+  "label": "토마토",
+  "id": "1591801",
+  "url": "https://www.flaticon.com/free-icon/tomato_1591801"
+ },
+ {
+  "key": "bell-pepper",
+  "label": "파프리카",
+  "id": "2732046",
+  "url": "https://www.flaticon.com/free-icon/bell-pepper_2732046"
+ },
+ {
+  "key": "broccoli",
+  "label": "브로콜리",
+  "id": "4056962",
+  "url": "https://www.flaticon.com/free-icon/broccoli_4056962"
+ },
+ {
+  "key": "corn",
+  "label": "옥수수",
+  "id": "895140",
+  "url": "https://www.flaticon.com/free-icon/corn_895140"
+ },
+ {
+  "key": "avocado",
+  "label": "아보카도",
+  "id": "381058",
+  "url": "https://www.flaticon.com/free-icon/avocado_381058"
+ },
+ {
+  "key": "fish",
+  "label": "연어·생선",
+  "id": "2346909",
+  "url": "https://www.flaticon.com/free-icon/salmon_2346909"
+ },
+ {
+  "key": "jar",
+  "label": "마요네즈",
+  "id": "1237067",
+  "url": "https://www.flaticon.com/free-icon/mayonnaise_1237067"
+ },
+ {
+  "key": "meat-on-bone",
+  "label": "햄",
+  "id": "1699238",
+  "url": "https://www.flaticon.com/free-icon/ham_1699238"
+ },
+ {
+  "key": "hot-dog",
+  "label": "소시지",
+  "id": "7782275",
+  "url": "https://www.flaticon.com/free-icon/sausage_7782275"
+ },
+ {
+  "key": "milk",
+  "label": "우유",
+  "id": "2049100",
+  "url": "https://www.flaticon.com/free-icon/milk-bottle_2049100"
+ },
+ {
+  "key": "cheese",
+  "label": "치즈",
+  "id": "517561",
+  "url": "https://www.flaticon.com/free-icon/cheese_517561"
+ },
+ {
+  "key": "butter",
+  "label": "버터",
+  "id": "9102636",
+  "url": "https://www.flaticon.com/free-icon/butter_9102636"
+ },
+ {
+  "key": "honey",
+  "label": "꿀",
+  "id": "517565",
+  "url": "https://www.flaticon.com/free-icon/honey_517565"
+ },
+ {
+  "key": "candy",
+  "label": "설탕",
+  "id": "2774028",
+  "url": "https://www.flaticon.com/free-icon/sugar-cube_2774028"
+ },
+ {
+  "key": "garlic",
+  "label": "마늘",
+  "id": "4465576",
+  "url": "https://www.flaticon.com/free-icon/garlic_4465576"
+ },
+ {
+  "key": "mushroom",
+  "label": "버섯",
+  "id": "1515022",
+  "url": "https://www.flaticon.com/free-icon/mushroom_1515022"
+ },
+ {
+  "key": "shrimp",
+  "label": "새우",
+  "id": "12400997",
+  "url": "https://www.flaticon.com/free-icon/shrimp_12400997"
+ },
+ {
+  "key": "rice-sheaf",
+  "label": "밀가루·부침가루",
+  "id": "9126284",
+  "url": "https://www.flaticon.com/free-icon/flour_9126284"
+ },
+ {
+  "key": "pouring-liquid",
+  "label": "식용유",
+  "id": "1744045",
+  "url": "https://www.flaticon.com/free-icon/olive-oil_1744045"
+ },
+ {
+  "key": "olive",
+  "label": "올리브유",
+  "id": "12069377",
+  "url": "https://www.flaticon.com/free-icon/olive-oil_12069377"
+ },
+ {
+  "key": "salt",
+  "label": "소금·후추",
+  "id": "736882",
+  "url": "https://www.flaticon.com/free-icon/salt-shaker_736882"
+ },
+ {
+  "key": "lemon",
+  "label": "레몬",
+  "id": "7396589",
+  "url": "https://www.flaticon.com/free-icon/lemon_7396589"
+ },
+ {
+  "key": "apple",
+  "label": "사과",
+  "id": "415733",
+  "url": "https://www.flaticon.com/free-icon/apple_415733"
+ },
+ {
+  "key": "bread",
+  "label": "빵",
+  "id": "4223111",
+  "url": "https://www.flaticon.com/free-icon/bedikas-chametz_4223111"
+ },
+ {
+  "key": "flatbread",
+  "label": "또띠아",
+  "id": "5157778",
+  "url": "https://www.flaticon.com/free-icon/tortillas_5157778"
+ },
+ {
+  "key": "noodles",
+  "label": "면",
+  "id": "1046799",
+  "url": "https://www.flaticon.com/free-icon/noodles_1046799"
+ },
+ {
+  "key": "ginger",
+  "label": "생강",
+  "id": "381089",
+  "url": "https://www.flaticon.com/free-icon/ginger_381089"
+ },
+ {
+  "key": "bowl",
+  "label": "기타(그릇)",
+  "id": "8937785",
+  "url": "https://www.flaticon.com/free-icon/porridge_8937785"
+ },
+ {
+  "key": "pot-of-food",
+  "label": "한식(카테고리)",
+  "id": "1761437",
+  "url": "https://www.flaticon.com/free-icon/boiling_1761437"
+ },
+ {
+  "key": "green-salad",
+  "label": "다이어트식(카테고리)",
+  "id": "1057357",
+  "url": "https://www.flaticon.com/free-icon/salad_1057357"
+ },
+ {
+  "key": "cooking",
+  "label": "자취요리(카테고리)",
+  "id": "2702519",
+  "url": "https://www.flaticon.com/free-icon/pan_2702519"
+ },
+ {
+  "key": "coin",
+  "label": "저예산(카테고리)",
+  "id": "1490853",
+  "url": "https://www.flaticon.com/free-icon/dollar_1490853"
+ },
+ {
+  "key": "stopwatch",
+  "label": "빠른조리(카테고리)",
+  "id": "2055568",
+  "url": "https://www.flaticon.com/free-icon/stopwatch_2055568"
+ },
+ {
+  "key": "kimchi",
+  "label": "김치",
+  "id": "7923227",
+  "url": "https://www.flaticon.com/free-icon/kimchi_7923227"
+ },
+ {
+  "key": "green-onion",
+  "label": "대파",
+  "id": "5346195",
+  "url": "https://www.flaticon.com/free-icon/leek_5346195"
+ },
+ {
+  "key": "tofu",
+  "label": "두부",
+  "id": "1687170",
+  "url": "https://www.flaticon.com/free-icon/tofu_1687170"
+ },
+ {
+  "key": "doenjang",
+  "label": "된장",
+  "id": "7472432",
+  "url": "https://www.flaticon.com/free-icon/miso_7472432"
+ },
+ {
+  "key": "gochujang",
+  "label": "고추장",
+  "id": "12971405",
+  "url": "https://www.flaticon.com/free-icon/gochujang_12971405"
+ },
+ {
+  "key": "gim",
+  "label": "김(주먹밥으로 대신)",
+  "id": "5896686",
+  "url": "https://www.flaticon.com/free-icon/onigiri_5896686"
+ },
+ {
+  "key": "cabbage",
+  "label": "양배추",
+  "id": "859319",
+  "url": "https://www.flaticon.com/free-icon/cabbage_859319"
+ },
+ {
+  "key": "zucchini",
+  "label": "애호박",
+  "id": "1515034",
+  "url": "https://www.flaticon.com/free-icon/zucchini_1515034"
+ },
+ {
+  "key": "soy-sauce",
+  "label": "간장",
+  "id": "4391852",
+  "url": "https://www.flaticon.com/free-icon/soy-sauce_4391852"
+ },
+ {
+  "key": "eomuk",
+  "label": "어묵",
+  "id": "4480721",
+  "url": "https://www.flaticon.com/free-icon/fish-cake_4480721"
+ }
+]
