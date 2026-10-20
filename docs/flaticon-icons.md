@@ -60,7 +60,7 @@
 | `cooking.png` | 자취요리(카테고리) | [pan](https://www.flaticon.com/free-icon/pan_2702519) |
 | `coin.png` | 저예산(카테고리) | [dollar](https://www.flaticon.com/free-icon/dollar_1490853) |
 | `stopwatch.png` | 빠른조리(카테고리) | [stopwatch](https://www.flaticon.com/free-icon/stopwatch_2055568) |
-| `kimchi.png` | 김치 | [kimchi](https://www.flaticon.com/free-icon/kimchi_7923227) |
+| `kimchi.png` | 김치 | [kimchi](https://www.flaticon.com/free-icon/kimchi_12971418) |
 | `green-onion.png` | 대파 | [leek](https://www.flaticon.com/free-icon/leek_5346195) |
 | `tofu.png` | 두부 | [tofu](https://www.flaticon.com/free-icon/tofu_1687170) |
 | `doenjang.png` | 된장 | [miso](https://www.flaticon.com/free-icon/miso_7472432) |
