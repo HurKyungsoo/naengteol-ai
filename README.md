@@ -99,7 +99,7 @@ npx supabase functions deploy analyze-fridge
 - [ ] 회원 계정과 기기 간 데이터 동기화 (Supabase Auth + 기획서 8장 테이블)
 
 **데이터**
-- [x] 레시피 사진 (Unsplash), 재료 3D 아이콘 (Fluent Emoji + 직접 그린 한식 재료)
+- [x] 레시피 사진 (Unsplash), 재료 아이콘 (Flaticon + 입체 효과)
 - [x] 레시피 100~300개 확보 → 공공 레시피 1,151개 + 샘플 21개 (Supabase DB, 기기 캐시)
 
 ## 공공 레시피 데이터 (식품안전나라)
@@ -129,8 +129,8 @@ npx supabase functions deploy analyze-fridge
 ## 이미지 출처
 
 - **레시피 사진** `assets/recipes/` — Unsplash 라이선스 무료 사진 (Unsplash+ 유료 사진 제외). 사진작가와 원본 링크는 `src/data/assets.ts`에 있고, 앱의 마이 → "사진·아이콘 출처"에서 볼 수 있다.
-- **재료 아이콘** `assets/ingredients/` — [Microsoft Fluent Emoji](https://github.com/microsoft/fluentui-emoji) 3D, MIT License (`assets/ingredients/LICENSE-fluentui-emoji.txt`).
-- **한식 재료 아이콘** (김치, 대파, 두부, 된장, 고추장, 김, 양배추, 애호박, 간장, 어묵) — Fluent에 없어서 같은 스타일로 직접 그린 것. 원본 SVG는 `assets/ingredients/custom-src/`에 있고, 수정 후 256px PNG로 다시 내보내면 된다.
+- **재료 아이콘** `assets/ingredients/` — [Flaticon](https://www.flaticon.com/) Special Flat 스타일 (Freepik/Magnific). 무료 라이선스는 **출처 표시 필수**라 앱의 출처 화면에 표시한다. 원본 512px PNG와 아이콘별 링크는 `assets/ingredients/flaticon-src/` (`LICENSE.txt`, `picks.json`).
+- 앱용 아이콘은 원본에 그림자·빛 반사를 더해 256px로 만든 것이다: `node scripts/stylize-icons.mjs` (효과 세기는 스크립트의 `EFFECT`). 아이콘을 바꾸려면 같은 이름으로 원본을 덮어쓰고 다시 실행한다. 받을 목록은 `docs/flaticon-icons.md`.
 - 사진·아이콘을 추가하면 `src/data/assets.ts`에 `require` 항목을 추가하고, 재료 이름 → 아이콘 매핑은 `src/lib/icons.ts`에서 고친다.
 
 ## 주의

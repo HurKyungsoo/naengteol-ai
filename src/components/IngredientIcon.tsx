@@ -12,7 +12,7 @@ type Props = {
   style?: StyleProp<ImageStyle>;
 };
 
-/** Fluent Emoji 3D 재료 아이콘 */
+/** 입체 효과를 더한 Flaticon 재료 아이콘 */
 export function IngredientIcon({ name, icon, size = 24, style }: Props) {
   const key = icon ?? ingredientIcon(name ?? '');
   return (

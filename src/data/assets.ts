@@ -95,9 +95,9 @@ export const RECIPE_PHOTOS: Record<string, { source: ImageSourcePropType; credit
   },
 };
 
-/** 재료 아이콘. Microsoft Fluent Emoji 3D (MIT 라이선스)와, 그 스타일로 직접 그린 한식 재료 아이콘 (assets/ingredients/custom-src) */
+/** 재료 아이콘. Flaticon (Freepik/Magnific) 원본에 입체 효과를 더한 것 (출처: assets/ingredients/flaticon-src/LICENSE.txt) */
 export const ICONS = {
-  // 직접 그린 아이콘
+  // 한식 재료
   kimchi: require('../../assets/ingredients/kimchi.png'),
   'green-onion': require('../../assets/ingredients/green-onion.png'),
   tofu: require('../../assets/ingredients/tofu.png'),
@@ -108,7 +108,7 @@ export const ICONS = {
   zucchini: require('../../assets/ingredients/zucchini.png'),
   'soy-sauce': require('../../assets/ingredients/soy-sauce.png'),
   eomuk: require('../../assets/ingredients/eomuk.png'),
-  // Fluent Emoji 3D
+  // 기본 재료·카테고리
   egg: require('../../assets/ingredients/egg.png'),
   'cooked-rice': require('../../assets/ingredients/cooked-rice.png'),
   'leafy-green': require('../../assets/ingredients/leafy-green.png'),

@@ -1,0 +1,65 @@
+재료 아이콘 출처 (Flaticon)
+
+Icons by Freepik (Magnific) from Flaticon — https://www.flaticon.com/
+Flaticon License: Free for personal and commercial purpose with attribution.
+https://www.flaticon.com/legal
+
+앱용 아이콘(assets/ingredients/*.png)은 아래 원본 PNG에 그림자·빛 반사 효과를 더해 다시 만든 것이다 (scripts/stylize-icons.mjs).
+
+egg             계란         https://www.flaticon.com/free-icon/egg_837560
+cooked-rice     밥          https://www.flaticon.com/free-icon/rice_2592747
+leafy-green     상추·잎채소     https://www.flaticon.com/free-icon/lettuce_1515026
+onion           양파         https://www.flaticon.com/free-icon/onion_1330443
+potato          감자         https://www.flaticon.com/free-icon/potato_1652077
+sweet-potato    고구마        https://www.flaticon.com/free-icon/sweet-potato_7230860
+bacon           돼지고기       https://www.flaticon.com/free-icon/beef_1703038
+cut-of-meat     소고기        https://www.flaticon.com/free-icon/steak_3268430
+poultry-leg     닭고기        https://www.flaticon.com/free-icon/chicken_4391772
+canned-food     참치캔        https://www.flaticon.com/free-icon/canned-food_405662
+cucumber        오이         https://www.flaticon.com/free-icon/cucumber_590781
+eggplant        가지         https://www.flaticon.com/free-icon/eggplant_4056868
+carrot          당근         https://www.flaticon.com/free-icon/carrot_381102
+hot-pepper      고추         https://www.flaticon.com/free-icon/chili_1691043
+tomato          토마토        https://www.flaticon.com/free-icon/tomato_1591801
+bell-pepper     파프리카       https://www.flaticon.com/free-icon/bell-pepper_2732046
+broccoli        브로콜리       https://www.flaticon.com/free-icon/broccoli_4056962
+corn            옥수수        https://www.flaticon.com/free-icon/corn_895140
+avocado         아보카도       https://www.flaticon.com/free-icon/avocado_381058
+fish            연어·생선      https://www.flaticon.com/free-icon/salmon_2346909
+jar             마요네즈       https://www.flaticon.com/free-icon/mayonnaise_1237067
+meat-on-bone    햄          https://www.flaticon.com/free-icon/ham_1699238
+hot-dog         소시지        https://www.flaticon.com/free-icon/sausage_7782275
+milk            우유         https://www.flaticon.com/free-icon/milk-bottle_2049100
+cheese          치즈         https://www.flaticon.com/free-icon/cheese_517561
+butter          버터         https://www.flaticon.com/free-icon/butter_9102636
+honey           꿀          https://www.flaticon.com/free-icon/honey_517565
+candy           설탕         https://www.flaticon.com/free-icon/sugar-cube_2774028
+garlic          마늘         https://www.flaticon.com/free-icon/garlic_4465576
+mushroom        버섯         https://www.flaticon.com/free-icon/mushroom_1515022
+shrimp          새우         https://www.flaticon.com/free-icon/shrimp_12400997
+rice-sheaf      밀가루·부침가루   https://www.flaticon.com/free-icon/flour_9126284
+pouring-liquid  식용유        https://www.flaticon.com/free-icon/olive-oil_1744045
+olive           올리브유       https://www.flaticon.com/free-icon/olive-oil_12069377
+salt            소금·후추      https://www.flaticon.com/free-icon/salt-shaker_736882
+lemon           레몬         https://www.flaticon.com/free-icon/lemon_7396589
+apple           사과         https://www.flaticon.com/free-icon/apple_415733
+bread           빵          https://www.flaticon.com/free-icon/bedikas-chametz_4223111
+flatbread       또띠아        https://www.flaticon.com/free-icon/tortillas_5157778
+noodles         면          https://www.flaticon.com/free-icon/noodles_1046799
+ginger          생강         https://www.flaticon.com/free-icon/ginger_381089
+bowl            기타(그릇)     https://www.flaticon.com/free-icon/porridge_8937785
+pot-of-food     한식(카테고리)   https://www.flaticon.com/free-icon/boiling_1761437
+green-salad     다이어트식(카테고리) https://www.flaticon.com/free-icon/salad_1057357
+cooking         자취요리(카테고리) https://www.flaticon.com/free-icon/pan_2702519
+coin            저예산(카테고리)  https://www.flaticon.com/free-icon/dollar_1490853
+stopwatch       빠른조리(카테고리) https://www.flaticon.com/free-icon/stopwatch_2055568
+kimchi          김치         https://www.flaticon.com/free-icon/kimchi_7923227
+green-onion     대파         https://www.flaticon.com/free-icon/leek_5346195
+tofu            두부         https://www.flaticon.com/free-icon/tofu_1687170
+doenjang        된장         https://www.flaticon.com/free-icon/miso_7472432
+gochujang       고추장        https://www.flaticon.com/free-icon/gochujang_12971405
+gim             김(주먹밥으로 대신) https://www.flaticon.com/free-icon/onigiri_5896686
+cabbage         양배추        https://www.flaticon.com/free-icon/cabbage_859319
+zucchini        애호박        https://www.flaticon.com/free-icon/zucchini_1515034
+soy-sauce       간장         https://www.flaticon.com/free-icon/soy-sauce_4391852
+eomuk           어묵         https://www.flaticon.com/free-icon/fish-cake_4480721
