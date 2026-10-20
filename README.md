@@ -64,13 +64,18 @@ supabase/functions/analyze-fridge/  사진 분석 서버 (Gemini API 호출)
 ## 사진 분석 (Gemini) 연결
 
 API 키를 앱에 넣지 않도록 Supabase Edge Function을 거친다. 설정 전에는 **데모 결과**가 나오고 화면에 "데모 결과예요"라고 표시된다.
+(Windows PowerShell에서는 `npx` 대신 `npx.cmd`)
 
 ```bash
-npx supabase secrets set GEMINI_API_KEY=... GEMINI_MODEL=<이미지 입력을 지원하는 Gemini 모델 ID>
+npx supabase login
+npx supabase link --project-ref <프로젝트 ref>
+npx supabase secrets set GEMINI_API_KEY=<Gemini 키> APP_KEY=<publishable 키>
 npx supabase functions deploy analyze-fridge
 ```
 
-그다음 `.env.example`을 `.env`로 복사해 주소와 anon key를 채운다.
+- 모델 기본값은 `gemini-3.5-flash-lite`. 바꾸려면 `GEMINI_MODEL` secret을 설정한다.
+- 함수는 `apikey` 헤더가 `APP_KEY`와 같을 때만 응답하고, 이미지 약 2MB 제한과 분당 10회 호출 제한이 있다.
+- 그다음 `.env.example`을 `.env`로 복사해 함수 주소와 publishable 키를 채우고 `npx expo start`를 다시 실행한다.
 
 ## 진행 상황 (기획서 9장 MVP 범위 기준)
 
@@ -87,7 +92,7 @@ npx supabase functions deploy analyze-fridge
 **일정에 따라 추가할 기능**
 - [x] 냉장고 사진 촬영·앨범 선택 → 크기 축소(가로 1024px)·압축 후 분석 요청
 - [x] AI가 추출한 재료 수정 및 확정 (확신도 낮은 재료는 기본 체크 해제)
-- [ ] 사진 분석 서버 배포 (`supabase/functions/analyze-fridge`, 현재 앱은 데모 결과)
+- [x] 사진 분석 서버 배포 (`supabase/functions/analyze-fridge`, Supabase 서울 리전, `.env` 설정 시 실제 분석)
 - [x] 추가 재료(기본 양념) 및 대체 재료 안내
 - [x] 재료 소진 처리와 조리 기록
 - [ ] 영양정보 표시 (근거 있는 데이터를 확보한 경우에만)

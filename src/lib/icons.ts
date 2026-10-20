@@ -25,6 +25,7 @@ const INGREDIENT_ICON: Record<string, IconName> = {
   오이: 'cucumber',
   가지: 'eggplant',
   양배추: 'cabbage',
+  적양배추: 'cabbage',
   배추: 'cabbage',
   양상추: 'leafy-green',
   상추: 'leafy-green',
