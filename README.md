@@ -46,18 +46,29 @@ npx expo-doctor
 src/components/       공용 UI (헤더, 하단 버튼, 레시피 이미지, 탭, 목록 항목 등)
 src/data/recipes.ts   샘플 레시피 데이터
 src/lib/recommend.ts  추천 로직 (보유 비율, 식단·시간·난이도·인분 필터)
-src/lib/ingredients.ts 재료 이름 정규화(달걀→계란 등), 대체 재료 표
-src/lib/icons.ts      재료 → 3D 아이콘
+src/lib/ingredients.ts 재료 이름 정규화·대체 재료 표 (실제 내용은 supabase/functions/_shared/ingredients.ts, 서버와 공유)
+src/lib/icons.ts      재료 → 아이콘
 src/data/assets.ts    사진·아이콘 require 목록, 사진 출처
 src/lib/analyze.ts    사진 분석 클라이언트 (서버 미설정 시 데모 결과)
+src/lib/guide.ts      AI 보충 설명 클라이언트
+src/lib/video.ts      참고 영상 목록·검색 클라이언트
+src/lib/substituteCheck.ts  요리별 대체 재료 AI 확인 클라이언트
 src/state/AppState.tsx 재료·즐겨찾기·조리 기록·조건·프로필 (기기에 저장)
-supabase/functions/analyze-fridge/  사진 분석 서버 (Gemini API 호출)
+src/state/RecipesProvider.tsx 샘플 + 공공 레시피 (하루 한 번 새로 받음)
+
+supabase/functions/analyze-fridge/     사진 분석 (Gemini)
+supabase/functions/explain-recipe/     AI 보충 설명 (Gemini)
+supabase/functions/find-video/         참고 영상 검색 (YouTube Data API) + 매일 미리 채우기
+supabase/functions/check-substitutes/  요리별 대체 재료 확인 (Gemini)
+supabase/functions/_shared/            guide.ts(설명 규칙), ingredients.ts(재료 표, 앱과 공유)
+supabase/migrations/                   테이블·예약 작업 SQL (적용 순서대로 날짜가 붙어 있음)
 ```
 
 ### 추천 방식
 
 1. 레시피 재료를 **핵심 재료 / 선택 재료 / 기본 양념**으로 나눈다. 점수는 핵심 재료로만 계산한다.
 2. 냉장고에 있는 핵심 재료는 1점, 대체 재료로 채울 수 있으면 0.5점으로 보유 비율을 구한다.
+   단, 요리 이름에 들어간 **주재료**(배숙의 배, 단호박죽의 단호박)는 바꾸면 다른 요리가 되므로 대체 재료로 쳐 주지 않는다.
 3. "보유 재료 우선 사용"이 켜져 있으면 핵심 재료가 하나도 없는 레시피는 뺀다.
 4. 보유 비율이 높고 조리 시간이 짧은 순으로 정렬한다.
 
@@ -93,7 +104,8 @@ npx supabase functions deploy analyze-fridge
 - [x] 냉장고 사진 촬영·앨범 선택 → 크기 축소(가로 1024px)·압축 후 분석 요청
 - [x] AI가 추출한 재료 수정 및 확정 (확신도 낮은 재료는 기본 체크 해제)
 - [x] 사진 분석 서버 배포 (`supabase/functions/analyze-fridge`, Supabase 서울 리전, `.env` 설정 시 실제 분석)
-- [x] 추가 재료(기본 양념) 및 대체 재료 안내
+- [x] 추가 재료(기본 양념) 및 대체 재료 안내 (주재료 판별, 요리별 AI 확인)
+- [x] 레시피 참고 영상 (유튜브 공식 플레이어, 매일 미리 채우기)
 - [x] 재료 소진 처리와 조리 기록
 - [x] 영양정보 표시 (식품안전나라 원본의 1인분 값만)
 - [ ] 회원 계정과 기기 간 데이터 동기화 (Supabase Auth + 기획서 8장 테이블)
@@ -137,6 +149,14 @@ npx supabase functions deploy analyze-fridge
 - 앱은 영상 목록을 하루 한 번 받아 홈의 "영상으로 따라 하기"와 레시피 탭의 "▶ 영상" 필터에 쓴다 (영상이 4개 미만이면 홈 줄은 숨김).
 - 배포: `npx supabase functions deploy find-video --project-ref <ref> --use-api`
 - 휴대폰 미리보기에서 특정 화면 열기: `/phone-preview.html?path=/recipe/fs-1060`
+
+### 대체 재료 (표 + 요리별 AI 확인)
+
+- **대체 재료 표** `supabase/functions/_shared/ingredients.ts` — 서로 바꿔 쓰는 묶음(`SUBSTITUTE_GROUPS`, 예: 버섯류)과 한쪽으로만 되는 대체(`SUBSTITUTES`, 예: 박력분 → 중력분). 표에 없는 이름은 뒤쪽이 같은 재료로 찾는다 (건표고버섯 → 표고버섯). 공공 레시피 핵심 재료의 약 63%에 대체 재료가 있다. 앱과 서버가 같은 파일을 쓰므로 다른 파일을 import하지 않는다.
+- **주재료 판별** `isMainIngredient` — 요리 이름에 들어간 재료면 "이 요리의 주재료예요"와 주의를 띄운다. "고추장찌개"의 고추처럼 더 긴 낱말의 일부는 제외(`TITLE_WORDS`).
+- **AI 확인** `supabase/functions/check-substitutes` — 대체 재료 화면의 "이 요리에 맞는지 AI로 확인"을 누르면, 서버가 표에서 후보를 만들고 Gemini가 이 요리 기준으로 잘 맞아요/괜찮아요/안 맞아요와 역할·뺄 수 있는지·양 조절 팁을 붙인다. 후보 밖의 재료는 받지 않는다. 처음 15~20초, 형식 오류면 한 번 더 시도.
+- 결과는 `recipe_substitutes` 테이블에 저장해 모두가 같이 쓴다. 테이블: `supabase/migrations/20261024000000_recipe_substitutes.sql`. 배포: `npx supabase functions deploy check-substitutes --project-ref <ref> --use-api`
+- 표를 고친 뒤 AI 결과를 다시 만들려면 `recipe_substitutes`의 해당 행을 지우고 앱의 `src/lib/substituteCheck.ts` `CACHE_KEY` 버전을 올린다.
 
 ## 이미지 출처
 
