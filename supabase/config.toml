@@ -6,3 +6,6 @@ project_id = "naengteol-ai"
 # 새 publishable 키는 JWT가 아니라서 기본 JWT 검사를 끄고,
 # 함수 안에서 apikey 헤더를 APP_KEY와 직접 비교한다.
 verify_jwt = false
+
+[functions.explain-recipe]
+verify_jwt = false

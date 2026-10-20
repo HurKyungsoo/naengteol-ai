@@ -113,6 +113,18 @@ npx supabase functions deploy analyze-fridge
 - 데이터 갱신: `.env`에 `FOODSAFETY_API_KEY`를 넣고 `node scripts/import-recipes.mjs`로 변환 결과를 확인한 뒤 `--apply`로 적용한다.
 - 재료 글("연두부 75g(3/4모), 칵테일새우 20g")은 스크립트가 재료명·분량·양념 여부로 나눈다. 규칙은 `scripts/import-recipes.mjs`의 `parseIngredients`.
 
+### AI 보충 설명 (explain-recipe)
+
+공공 레시피 화면에서 "AI로 자세히 설명 받기"를 누르면 `supabase/functions/explain-recipe`가 Gemini로 보충 설명
+(시작 전 준비, 단계별 팁, 위생 주의)을 만든다.
+
+- 원본 레시피는 바꾸지 않는다 (약관상 변조 금지). 화면에 "AI 보충 설명"으로 구분해 표시한다.
+- 함수는 앱이 보낸 글이 아니라 **DB의 원본 레시피**를 읽어 만든다 → 임의 질문에 악용할 수 없다.
+- 한 번 만든 설명은 `recipe_guides` 테이블에 저장해 모든 사용자가 같이 쓴다 (두 번째부터 즉시, 비용 없음). 앱도 기기에 저장한다.
+- 새로 만들 때만 호출 제한(분당 6회)이 적용된다. 테이블: `supabase/migrations/20261021000000_recipe_guides.sql`
+- 배포: `npx supabase functions deploy explain-recipe --project-ref <ref> --use-api`
+- 설명 문구를 바꾸고 다시 만들려면 함수의 `RULES`를 고쳐 배포하고 `recipe_guides`에서 해당 행을 지운다.
+
 ## 이미지 출처
 
 - **레시피 사진** `assets/recipes/` — Unsplash 라이선스 무료 사진 (Unsplash+ 유료 사진 제외). 사진작가와 원본 링크는 `src/data/assets.ts`에 있고, 앱의 마이 → "사진·아이콘 출처"에서 볼 수 있다.

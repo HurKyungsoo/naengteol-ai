@@ -1,14 +1,16 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Bullet } from '@/components/GuideSection';
 import { IngredientIcon } from '@/components/IngredientIcon';
 import { BottomBar, PrimaryButton } from '@/components/PrimaryButton';
 import { RecipeImage } from '@/components/RecipeImage';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import type { IconName } from '@/data/assets';
+import { useRecipeGuide } from '@/lib/guide';
 import { ingredientIcon } from '@/lib/icons';
 import { normalizeIngredient, substitutesFor } from '@/lib/ingredients';
 import { useAppState } from '@/state/AppState';
@@ -47,6 +49,16 @@ export default function CookScreen() {
     return pantry.filter((p) => names.has(normalizeIngredient(p.name)));
   }, [recipe, pantry]);
 
+  const guide = useRecipeGuide(recipe);
+  const [expanded, setExpanded] = useState<Set<number>>(new Set());
+  const toggleTips = (index: number) =>
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(index)) next.delete(index);
+      else next.add(index);
+      return next;
+    });
+
   if (!recipe) {
     return (
       <View style={styles.screen}>
@@ -83,9 +95,23 @@ export default function CookScreen() {
         {done.size}/{recipe.steps.length} 단계 완료 · 단계를 누르면 체크돼요
       </Text>
       <ScrollView contentContainerStyle={styles.content}>
+        {guide.available && !guide.guide && (
+          <Pressable style={styles.guideRequest} onPress={guide.request} disabled={guide.loading}>
+            {guide.loading ? (
+              <ActivityIndicator color={colors.ink} />
+            ) : (
+              <Ionicons name="sparkles-outline" size={18} color={colors.ink} />
+            )}
+            <Text style={styles.guideRequestText}>
+              {guide.loading ? '설명을 만들고 있어요…' : guide.error ?? '단계별 자세한 설명 받기 (AI)'}
+            </Text>
+          </Pressable>
+        )}
         {recipe.steps.map((step, index) => {
           const isDone = done.has(index);
           const last = index === recipe.steps.length - 1;
+          const tips = guide.guide?.steps.find((s) => s.index === index + 1)?.tips ?? [];
+          const open = expanded.has(index);
           return (
             <Pressable key={index} style={styles.step} onPress={() => toggleStep(index)}>
               <View style={styles.rail}>
@@ -110,6 +136,26 @@ export default function CookScreen() {
                 <View style={styles.cardBody}>
                   {step.title && <Text style={styles.stepTitle}>{step.title}</Text>}
                   <Text style={styles.stepText}>{step.text}</Text>
+                  {tips.length > 0 && (
+                    <Pressable
+                      onPress={(e) => {
+                        // 바깥 단계 카드(누르면 완료 체크)까지 눌리지 않게 한다.
+                        e.stopPropagation();
+                        toggleTips(index);
+                      }}
+                      hitSlop={6}
+                      style={styles.tipsToggle}>
+                      <Text style={styles.tipsToggleText}>{open ? '💡 접기' : '💡 자세히'}</Text>
+                    </Pressable>
+                  )}
+                  {open && (
+                    <View style={styles.tips}>
+                      {tips.map((t) => (
+                        <Bullet key={t} text={t} />
+                      ))}
+                      <Text style={styles.tipsNote}>AI 보충 설명</Text>
+                    </View>
+                  )}
                 </View>
               </View>
             </Pressable>
@@ -242,6 +288,43 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 19,
     color: colors.textSoft,
+  },
+  guideRequest: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  guideRequestText: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  tipsToggle: {
+    alignSelf: 'flex-start',
+    marginTop: 4,
+  },
+  tipsToggleText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  tips: {
+    marginTop: 4,
+    gap: 2,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  tipsNote: {
+    marginTop: 2,
+    fontSize: 10,
+    color: colors.textMuted,
   },
   backdrop: {
     flex: 1,

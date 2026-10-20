@@ -4,10 +4,12 @@ import { useEffect, useMemo } from 'react';
 import { Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { GuideSection } from '@/components/GuideSection';
 import { IngredientIcon } from '@/components/IngredientIcon';
 import { BottomBar, PrimaryButton } from '@/components/PrimaryButton';
 import { RecipeImage } from '@/components/RecipeImage';
 import { goBack, ScreenHeader } from '@/components/ScreenHeader';
+import { useRecipeGuide } from '@/lib/guide';
 import { hasIngredient } from '@/lib/ingredients';
 import { formatMinutes, matchRecipe, pantryNameSet } from '@/lib/recommend';
 import { useAppState } from '@/state/AppState';
@@ -24,6 +26,7 @@ export default function RecipeDetailScreen() {
 
   const owned = useMemo(() => pantryNameSet(pantry), [pantry]);
   const match = useMemo(() => (recipe ? matchRecipe(recipe, owned) : undefined), [recipe, owned]);
+  const guide = useRecipeGuide(recipe);
 
   useEffect(() => {
     if (recipe) markViewed(recipe.id);
@@ -84,6 +87,9 @@ export default function RecipeDetailScreen() {
             <Meta icon="person-outline" text={`${recipe.servings}인분`} />
           </View>
           <Text style={styles.summary}>{recipe.summary}</Text>
+          {guide.available && (
+            <GuideSection guide={guide.guide} loading={guide.loading} error={guide.error} onRequest={guide.request} />
+          )}
 
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>필요한 재료</Text>
