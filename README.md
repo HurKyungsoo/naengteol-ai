@@ -1,6 +1,6 @@
 # 냉털AI
 
-냉장고 속 재료로 만들 수 있는 요리를 추천하는 모바일 앱 (React Native + Expo SDK 58, Expo Router).
+냉장고 속 재료로 만들 수 있는 요리를 추천하는 모바일 앱 (React Native + Expo SDK 57, Expo Router).
 
 ## 실행 방법
 
