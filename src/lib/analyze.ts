@@ -17,7 +17,15 @@ export type AnalyzeResult = {
 };
 
 const ENDPOINT = process.env.EXPO_PUBLIC_ANALYZE_URL;
-const ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+/** Supabase publishable 키. 공개돼도 되는 키이며, 서버 함수가 APP_KEY와 비교해 앱의 요청인지 확인한다. */
+const APP_KEY = process.env.EXPO_PUBLIC_SUPABASE_KEY;
+const TIMEOUT_MS = 30_000;
+
+const ERROR_MESSAGES: Record<number, string> = {
+  401: '사진 분석 서버 설정이 맞지 않아요.',
+  413: '사진 용량이 너무 커요.',
+  429: '잠시 후 다시 시도해 주세요. (요청이 너무 많아요)',
+};
 
 const DEMO_ITEMS: DetectedIngredient[] = [
   { name: '토마토', confidence: 0.96 },
@@ -40,15 +48,24 @@ export async function analyzeFridgePhoto(base64: string, mimeType = 'image/jpeg'
     return { items: DEMO_ITEMS, demo: true };
   }
 
-  const res = await fetch(ENDPOINT, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(ANON_KEY && { Authorization: `Bearer ${ANON_KEY}`, apikey: ANON_KEY }),
-    },
-    body: JSON.stringify({ image: stripDataUrl(base64), mimeType }),
-  });
-  if (!res.ok) throw new Error(`사진 분석 서버 오류 (${res.status})`);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  let res: Response;
+  try {
+    res = await fetch(ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(APP_KEY && { apikey: APP_KEY }) },
+      body: JSON.stringify({ image: stripDataUrl(base64), mimeType }),
+      signal: controller.signal,
+    });
+  } catch {
+    throw new Error(
+      controller.signal.aborted ? '분석이 너무 오래 걸려요. 다시 시도해 주세요.' : '인터넷 연결을 확인해 주세요.',
+    );
+  } finally {
+    clearTimeout(timer);
+  }
+  if (!res.ok) throw new Error(ERROR_MESSAGES[res.status] ?? `사진 분석에 실패했어요. (${res.status})`);
 
   const data = (await res.json()) as { ingredients?: unknown };
   const items = Array.isArray(data.ingredients)
