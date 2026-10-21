@@ -36,20 +36,6 @@ export function ScreenHeader({ title, back = true, right }: Props) {
   );
 }
 
-/** 시안의 네 점 메뉴 아이콘 */
-export function DotsIcon({ color = colors.text }: { color?: string }) {
-  return (
-    <View style={styles.dots}>
-      {[0, 1].map((row) => (
-        <View key={row} style={styles.dotRow}>
-          <View style={[styles.dot, { backgroundColor: color }]} />
-          <View style={[styles.dot, { backgroundColor: color }]} />
-        </View>
-      ))}
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   header: {
     paddingHorizontal: spacing.xl,
@@ -66,19 +52,5 @@ const styles = StyleSheet.create({
   },
   spacer: {
     flex: 1,
-  },
-  dots: {
-    width: 13,
-    height: 13,
-    justifyContent: 'space-between',
-  },
-  dotRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  dot: {
-    width: 4.5,
-    height: 4.5,
-    borderRadius: 3,
   },
 });

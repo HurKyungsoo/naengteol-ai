@@ -8,7 +8,7 @@ import { Bullet } from '@/components/GuideSection';
 import { IngredientIcon } from '@/components/IngredientIcon';
 import { BottomBar, PrimaryButton } from '@/components/PrimaryButton';
 import { RecipeImage } from '@/components/RecipeImage';
-import { ScreenHeader } from '@/components/ScreenHeader';
+import { goBack, ScreenHeader } from '@/components/ScreenHeader';
 import type { IconName } from '@/data/assets';
 import { useRecipeGuide } from '@/lib/guide';
 import { ingredientIcon } from '@/lib/icons';
@@ -163,7 +163,12 @@ export default function CookScreen() {
         })}
       </ScrollView>
       <BottomBar>
-        <PrimaryButton label="완료" onPress={openSheet} />
+        {/* 한 단계도 체크하지 않았으면 기록·재료 정리 없이 나간다 */}
+        {done.size === 0 ? (
+          <PrimaryButton label="요리 그만하기" variant="light" onPress={goBack} />
+        ) : (
+          <PrimaryButton label="완료" onPress={openSheet} />
+        )}
       </BottomBar>
 
       <Modal visible={sheet} transparent animationType="slide" onRequestClose={() => setSheet(false)}>

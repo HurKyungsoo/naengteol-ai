@@ -56,8 +56,9 @@ export default function RecipesScreen() {
             <Pressable style={styles.conditions} onPress={() => router.push('/preferences')}>
               <Ionicons name="options-outline" size={16} color={colors.textSoft} />
               <Text style={styles.conditionsText} numberOfLines={1}>
-                {conditions.length > 0 ? conditions.join(' · ') : '조건 없이 모든 레시피'}
-                {preferences.preferOwned ? ' · 보유 재료 우선' : ''}
+                {[...(preferences.preferOwned ? ['보유 재료 우선'] : []), ...conditions].join(' · ') ||
+                  '조건 없이 모든 레시피'}
+                {preferences.preferOwned && conditions.length === 0 ? ' · 다른 조건 없음' : ''}
               </Text>
               <Text style={styles.conditionsEdit}>변경</Text>
             </Pressable>

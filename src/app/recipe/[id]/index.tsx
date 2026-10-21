@@ -236,8 +236,16 @@ function IngredientRow({
     <View style={styles.ingredient}>
       <IngredientIcon name={ingredient.name} size={24} />
       <Text style={styles.ingredientName}>{ingredient.name}</Text>
-      {ingredient.optional && <Text style={styles.optional}>선택</Text>}
-      {!subtle && (owned ? <View style={styles.ownedDot} /> : <Text style={styles.lack}>부족</Text>)}
+      {/* 선택 재료는 없어도 만들 수 있으니 '부족' 대신 회색으로 알려 준다 */}
+      {!subtle &&
+        (owned ? (
+          <View style={styles.ownedDot} />
+        ) : ingredient.optional ? (
+          <Text style={styles.optional}>없어도 돼요</Text>
+        ) : (
+          <Text style={styles.lack}>부족</Text>
+        ))}
+      {ingredient.optional && owned && <Text style={styles.optional}>선택</Text>}
       <View style={styles.spacer} />
       <Text style={styles.amount}>{ingredient.amount}</Text>
     </View>
