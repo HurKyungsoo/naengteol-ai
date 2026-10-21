@@ -10,12 +10,13 @@ import { colors, radius, spacing, switchColors } from '@/theme';
 import type { Diet, Difficulty, Preferences, ServingsOption } from '@/types';
 
 const DIET_OPTIONS: { id: Diet; label: string }[] = [
-  { id: '한식', label: '일반식·한식' },
+  // 홈 카테고리(DIETS)와 같은 이름을 쓴다
+  { id: '한식', label: '한식' },
   { id: '다이어트', label: '다이어트식' },
-  { id: '고단백', label: '고단백 식단' },
-  { id: '자취', label: '자취·간편식' },
-  { id: '저예산', label: '저예산 식단' },
-  { id: '빠른조리', label: '빠른 조리' },
+  { id: '고단백', label: '고단백' },
+  { id: '자취', label: '자취요리' },
+  { id: '저예산', label: '저예산' },
+  { id: '빠른조리', label: '빠른조리' },
 ];
 
 type Row = 'time' | 'difficulty' | 'servings';
@@ -66,7 +67,7 @@ export default function PreferencesScreen() {
 
         {(draft.diet === '다이어트' || draft.diet === '고단백') && (
           <Text style={styles.hint}>
-            다이어트식·고단백 식단은 메뉴를 고르기 위한 분류예요. 의학적 효과나 영양 목표 달성을 보장하지 않아요.
+            다이어트식·고단백은 메뉴를 고르기 위한 분류예요. 의학적 효과나 영양 목표 달성을 보장하지 않아요.
           </Text>
         )}
 

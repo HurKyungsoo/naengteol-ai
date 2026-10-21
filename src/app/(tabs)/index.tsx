@@ -6,7 +6,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { IngredientIcon } from '@/components/IngredientIcon';
 import { RecipeImage } from '@/components/RecipeImage';
-import { DotsIcon } from '@/components/ScreenHeader';
 import { hasIngredient } from '@/lib/ingredients';
 import { formatMinutes, pantryNameSet, recommendRecipes } from '@/lib/recommend';
 import { formatDuration, useVideoIndex, videoThumbnail } from '@/lib/video';
@@ -54,7 +53,7 @@ export default function HomeScreen() {
           hitSlop={10}
           accessibilityRole="button"
           accessibilityLabel="추천 조건 설정">
-          <DotsIcon />
+          <Ionicons name="options-outline" size={22} color={colors.text} />
         </Pressable>
         <Pressable
           onPress={() => router.push('/favorites')}

@@ -1,32 +1,21 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Bullet } from '@/components/GuideSection';
 import { IngredientIcon } from '@/components/IngredientIcon';
 import { BottomBar, PrimaryButton } from '@/components/PrimaryButton';
 import { RecipeImage } from '@/components/RecipeImage';
-import { ScreenHeader } from '@/components/ScreenHeader';
-import type { IconName } from '@/data/assets';
+import { goBack, ScreenHeader } from '@/components/ScreenHeader';
 import { useRecipeGuide } from '@/lib/guide';
-import { ingredientIcon } from '@/lib/icons';
+import { STEP_ICONS, stepHeat, stepIngredients, stepKind, stepTime } from '@/lib/stepInfo';
 import { normalizeIngredient, substitutesFor } from '@/lib/ingredients';
 import { useAppState } from '@/state/AppState';
 import { useRecipes } from '@/state/RecipesProvider';
 import { colors, radius, spacing } from '@/theme';
 import type { Recipe, RecipeStep } from '@/types';
-
-/** 단계 설명에 처음 나오는 재료의 아이콘을 단계 그림으로 쓴다. 없으면 요리 사진을 보여준다. */
-function stepIcon(recipe: Recipe, step: RecipeStep): IconName | undefined {
-  const found = recipe.ingredients
-    .filter((i) => !i.seasoning)
-    .map((i) => ({ i, at: step.text.indexOf(i.name) }))
-    .filter((x) => x.at >= 0)
-    .sort((a, b) => a.at - b.at)[0];
-  return found ? ingredientIcon(found.i.name) : undefined;
-}
 
 export default function CookScreen() {
   const insets = useSafeAreaInsets();
@@ -125,17 +114,18 @@ export default function CookScreen() {
                 {!last && <View style={styles.line} />}
               </View>
               <View style={[styles.card, isDone && styles.cardDone]}>
-                <RecipeImage
-                  recipe={recipe}
-                  imageUri={step.image}
-                  icon={step.image ? undefined : stepIcon(recipe, step)}
-                  width={72}
-                  height={72}
-                  radius={radius.md}
-                />
+                {/* 단계 사진이 있으면 사진, 없으면(샘플 레시피) 동작 아이콘 */}
+                {step.image ? (
+                  <RecipeImage recipe={recipe} imageUri={step.image} width={72} height={72} radius={radius.md} />
+                ) : (
+                  <View style={[styles.stepIcon, isDone && styles.stepIconDone]}>
+                    <Image source={STEP_ICONS[stepKind(step)]} style={styles.stepIconImage} resizeMode="contain" />
+                  </View>
+                )}
                 <View style={styles.cardBody}>
                   {step.title && <Text style={styles.stepTitle}>{step.title}</Text>}
                   <Text style={styles.stepText}>{step.text}</Text>
+                  <StepChips recipe={recipe} step={step} />
                   {tips.length > 0 && (
                     <Pressable
                       onPress={(e) => {
@@ -163,7 +153,12 @@ export default function CookScreen() {
         })}
       </ScrollView>
       <BottomBar>
-        <PrimaryButton label="완료" onPress={openSheet} />
+        {/* 한 단계도 체크하지 않았으면 기록·재료 정리 없이 나간다 */}
+        {done.size === 0 ? (
+          <PrimaryButton label="요리 그만하기" variant="light" onPress={goBack} />
+        ) : (
+          <PrimaryButton label="완료" onPress={openSheet} />
+        )}
       </BottomBar>
 
       <Modal visible={sheet} transparent animationType="slide" onRequestClose={() => setSheet(false)}>
@@ -209,6 +204,36 @@ export default function CookScreen() {
           </View>
         </View>
       </Modal>
+    </View>
+  );
+}
+
+/** 단계의 핵심 정보: 시간, 불 세기, 들어가는 재료 */
+function StepChips({ recipe, step }: { recipe: Recipe; step: RecipeStep }) {
+  const time = stepTime(step);
+  const heat = stepHeat(step);
+  const ingredients = stepIngredients(recipe, step);
+  if (!time && !heat && ingredients.length === 0) return null;
+  return (
+    <View style={styles.stepChips}>
+      {time && (
+        <View style={[styles.stepChip, styles.timeChip]}>
+          <Ionicons name="timer-outline" size={13} color={colors.onInk} />
+          <Text style={styles.timeChipText}>{time}</Text>
+        </View>
+      )}
+      {heat && (
+        <View style={[styles.stepChip, styles.heatChip]}>
+          <Ionicons name="flame-outline" size={13} color="#B8461A" />
+          <Text style={styles.heatChipText}>{heat}</Text>
+        </View>
+      )}
+      {ingredients.map((name) => (
+        <View key={name} style={[styles.stepChip, styles.ingredientChip]}>
+          <IngredientIcon name={name} size={16} />
+          <Text style={styles.ingredientChipText}>{name}</Text>
+        </View>
+      ))}
     </View>
   );
 }
@@ -278,6 +303,59 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     gap: 4,
+  },
+  stepIcon: {
+    width: 72,
+    height: 72,
+    borderRadius: radius.md,
+    backgroundColor: '#FFF4E3',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepIconDone: {
+    backgroundColor: colors.successSoft,
+  },
+  stepIconImage: {
+    width: 58,
+    height: 58,
+  },
+  stepChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 4,
+  },
+  stepChip: {
+    height: 26,
+    paddingHorizontal: 9,
+    borderRadius: radius.pill,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  timeChip: {
+    backgroundColor: colors.ink,
+  },
+  timeChipText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.onInk,
+  },
+  heatChip: {
+    backgroundColor: colors.accentSoft,
+  },
+  heatChipText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#8A3412',
+  },
+  ingredientChip: {
+    paddingLeft: 5,
+    backgroundColor: colors.surface,
+  },
+  ingredientChipText: {
+    fontSize: 12,
+    color: colors.text,
   },
   stepTitle: {
     fontSize: 15,

@@ -20,7 +20,6 @@ export default function MyScreen() {
   };
 
   const menu: { icon: IconName; label: string; href?: Href; onPress?: () => void }[] = [
-    { icon: 'person-circle-outline', label: '내 정보', onPress: () => setEditing(true) },
     { icon: 'heart-outline', label: '즐겨찾기', href: '/favorites' },
     { icon: 'time-outline', label: '조리 기록', href: { pathname: '/pantry', params: { tab: 'history' } } },
     { icon: 'options-outline', label: '추천 조건 설정', href: '/preferences' },
@@ -55,13 +54,17 @@ export default function MyScreen() {
           ) : (
             <View>
               <Text style={styles.nickname}>{profile.nickname}</Text>
-              <Text style={styles.role}>일반 사용자</Text>
+              {/* 계정 기능이 없어서 '내 정보'는 닉네임 바꾸기뿐이다 */}
+              <Pressable onPress={() => setEditing(true)} hitSlop={8} style={styles.renameButton} accessibilityRole="button">
+                <Ionicons name="pencil-outline" size={13} color={colors.textSoft} />
+                <Text style={styles.role}>닉네임 바꾸기</Text>
+              </Pressable>
             </View>
           )}
         </View>
 
         <View style={styles.stats}>
-          <Stat label="보유 재료" value={pantry.length} />
+          <Stat label="냉장고 재료" value={pantry.length} />
           <Stat label="즐겨찾기" value={favorites.length} />
           <Stat label="만든 요리" value={cookLogs.length} />
         </View>
@@ -128,10 +131,15 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.text,
   },
-  role: {
+  renameButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     marginTop: 2,
+  },
+  role: {
     fontSize: 13,
-    color: colors.textMuted,
+    color: colors.textSoft,
   },
   nameEdit: {
     flex: 1,

@@ -9,16 +9,14 @@ import { matchesTab, pantryNameSet } from '@/lib/recommend';
 import { useAppState } from '@/state/AppState';
 import { useRecipes } from '@/state/RecipesProvider';
 import { colors, radius, spacing } from '@/theme';
-import type { Cuisine, Diet } from '@/types';
+import { CUISINES, type Cuisine, type Diet } from '@/types';
 
 type Tab = 'all' | Cuisine | Diet;
 
 const TABS: { value: Tab; label: string }[] = [
   { value: 'all', label: '전체' },
-  { value: '한식', label: '한식' },
-  { value: '다이어트', label: '다이어트식' },
-  { value: '양식', label: '양식' },
-  { value: '간식', label: '간식' },
+  // 레시피 탭과 같은 분류
+  ...CUISINES.map((c) => ({ value: c as Tab, label: c })),
 ];
 
 export default function FavoritesScreen() {
