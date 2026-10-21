@@ -8,9 +8,11 @@ import { BottomBar, PrimaryButton } from '@/components/PrimaryButton';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { SegmentTabs } from '@/components/Tabs';
 import { KNOWN_INGREDIENTS } from '@/lib/icons';
+import { buildVocabulary, checkIngredient, splitIngredientInput } from '@/lib/ingredientInput';
 import { normalizeIngredient } from '@/lib/ingredients';
 import { pickPhotoFromLibrary } from '@/lib/pickPhoto';
 import { useAppState } from '@/state/AppState';
+import { useRecipes } from '@/state/RecipesProvider';
 import { colors, radius, spacing } from '@/theme';
 
 type Mode = 'manual' | 'photo' | 'recent';
@@ -23,12 +25,14 @@ export default function AddIngredientsScreen() {
   const [text, setText] = useState('');
   const [message, setMessage] = useState<string | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
+  const { recipes } = useRecipes();
+  const vocabulary = useMemo(() => buildVocabulary(recipes), [recipes]);
 
   const owned = useMemo(() => new Set(pantry.map((p) => normalizeIngredient(p.name))), [pantry]);
 
   // "계란, 두부, 양" 처럼 여러 개를 입력하는 중이면 마지막 단어로 자동완성한다.
-  const tokens = text.split(/[,\s]+/);
-  const query = normalizeIngredient(tokens[tokens.length - 1] ?? '');
+  const tokens = text.split(/[,，]/);
+  const query = normalizeIngredient(tokens[tokens.length - 1]?.trim() ?? '');
   const suggestions = query
     ? KNOWN_INGREDIENTS.filter((n) => n.includes(query) && !owned.has(normalizeIngredient(n))).slice(0, 6)
     : [];
@@ -38,20 +42,31 @@ export default function AddIngredientsScreen() {
     (n) => !owned.has(normalizeIngredient(n)),
   );
 
-  /** 쉼표나 띄어쓰기로 구분한 재료를 한 번에 추가한다. */
+  /** 쉼표로 구분한 재료를 한 번에 추가한다. 모르는 이름은 넣지 않고 입력창에 남겨 고칠 수 있게 한다. */
   const addAll = (input: string) => {
-    const names = input.split(/[,\s]+/).filter(Boolean);
+    const names = splitIngredientInput(input);
     if (names.length === 0) return;
-    const duplicates = names.filter((n) => !addIngredient(n));
-    setMessage(duplicates.length > 0 ? `${duplicates.join(', ')}은(는) 이미 있어요` : null);
-    setText('');
+    const checks = names.map((name) => ({ name, check: checkIngredient(name, vocabulary) }));
+    const unknown = checks.filter((c) => !c.check.known);
+    const duplicates = checks.filter((c) => c.check.known && !addIngredient(c.name)).map((c) => c.name);
+    const lines = [
+      duplicates.length > 0 && `${duplicates.join(', ')}은(는) 이미 있어요`,
+      ...unknown.map(({ name, check }) =>
+        !check.known && check.suggestions.length > 0
+          ? `'${name}'은(는) 모르는 재료예요. 혹시 ${check.suggestions.join(', ')}?`
+          : `'${name}'은(는) 모르는 재료예요`,
+      ),
+    ].filter(Boolean);
+    setMessage(lines.length > 0 ? lines.join('\n') : null);
+    setText(unknown.map((u) => u.name).join(', '));
   };
 
   const addSuggestion = (name: string) => {
     addIngredient(name);
     setMessage(null);
     // 입력 중이던 마지막 단어만 자동완성으로 바꾸고, 앞서 쓴 재료는 남겨 둔다.
-    setText(tokens.slice(0, -1).filter(Boolean).join(', ') + (tokens.length > 1 ? ', ' : ''));
+    const before = tokens.slice(0, -1).map((s) => s.trim()).filter(Boolean);
+    setText(before.join(', ') + (before.length > 0 ? ', ' : ''));
   };
 
   const add = (name: string) => {

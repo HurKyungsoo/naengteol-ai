@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { IngredientIcon } from '@/components/IngredientIcon';
 import { RecipeImage } from '@/components/RecipeImage';
 import { DotsIcon } from '@/components/ScreenHeader';
+import { buildVocabulary, checkIngredient, splitIngredientInput } from '@/lib/ingredientInput';
 import { hasIngredient } from '@/lib/ingredients';
 import { formatMinutes, pantryNameSet, recommendRecipes } from '@/lib/recommend';
 import { formatDuration, useVideoIndex, videoThumbnail } from '@/lib/video';
@@ -22,6 +23,8 @@ export default function HomeScreen() {
   const [text, setText] = useState('');
   // 방금 넣은 재료 안내 ("✓ 계란, 양파를 넣었어요"). 잠깐 보였다가 사라진다.
   const [notice, setNotice] = useState<string | null>(null);
+  // 모르는 재료라 넣지 않은 이름. 비슷한 재료를 고르거나 그래도 넣을 수 있다.
+  const [unknown, setUnknown] = useState<{ name: string; suggestions: string[]; invalid: boolean }[]>([]);
   useEffect(() => {
     if (!notice) return;
     const timer = setTimeout(() => setNotice(null), 3000);
@@ -34,7 +37,10 @@ export default function HomeScreen() {
   const suggested = useMemo(() => matches.map((m) => m.recipe), [matches]);
   const readyCount = matches.filter((m) => m.missing.length === 0).length;
   // 냉장고에 재료가 있으면 "바로 만들 수 있어요" 줄이 따로 나오므로, 아래 줄은 최근 본 레시피나 전체 레시피를 보여 준다.
-  const shelf: Recipe[] = recent.length > 0 ? recent : pantry.length === 0 && suggested.length > 0 ? suggested : recipes;
+  // 냉장고에 재료가 있으면 위에 "바로 만들 수 있어요" 줄이 나오므로, 아래 줄은 최근 본 레시피가 있을 때만 보여 준다.
+  const showShelf = pantry.length === 0 || recent.length > 0;
+  const shelf: Recipe[] = recent.length > 0 ? recent : recipes;
+  const vocabulary = useMemo(() => buildVocabulary(recipes), [recipes]);
 
   // 영상이 있는 레시피: 내 재료로 만들 수 있는 것부터. 영상이 적을 때는 줄을 숨긴다.
   const videos = useVideoIndex();
@@ -44,16 +50,22 @@ export default function HomeScreen() {
     return ordered.filter((r) => videos.has(r.id) && !seen.has(r.id) && seen.add(r.id)).slice(0, 8);
   }, [suggested, recipes, videos]);
 
-  // 엔터를 치면 냉장고에 넣고 홈에 머문다. 여러 번 넣은 뒤 [레시피 추천받기]로 넘어간다.
-  // "닭 가슴살"처럼 띄어 쓴 재료가 있어서 쉼표로만 나눈다 (재료 등록 화면과 같은 규칙).
+  // 엔터를 치면 아는 재료만 냉장고에 넣고 홈에 머문다. 모르는 이름은 넣지 않고 비슷한 재료를 제안한다.
   const submit = () => {
-    const names = text.split(/[,，\n]+/).map((n) => n.trim()).filter(Boolean);
+    const names = splitIngredientInput(text);
     if (names.length === 0) {
       router.push('/ingredients/add');
       return;
     }
-    const added = names.filter((n) => addIngredient(n));
-    const skipped = names.filter((n) => !added.includes(n));
+    const checks = names.map((name) => ({ name, check: checkIngredient(name, vocabulary) }));
+    const knownNames = checks.filter((c) => c.check.known).map((c) => c.name);
+    setUnknown(
+      checks.flatMap(({ name, check }) =>
+        check.known ? [] : [{ name, suggestions: check.suggestions, invalid: check.invalid }],
+      ),
+    );
+    const added = knownNames.filter((n) => addIngredient(n));
+    const skipped = knownNames.filter((n) => !added.includes(n));
     setText('');
     setNotice(
       [
@@ -63,6 +75,14 @@ export default function HomeScreen() {
         .filter(Boolean)
         .join(' · '),
     );
+  };
+
+  const resolveUnknown = (name: string, pick?: string) => {
+    if (pick) {
+      const ok = addIngredient(pick);
+      setNotice(ok ? `✓ ${withJosa(pick, '을', '를')} 넣었어요` : `${withJosa(pick, '은', '는')} 이미 있어요`);
+    }
+    setUnknown((list) => list.filter((u) => u.name !== name));
   };
 
   const pickDiet = (diet: Diet) => {
@@ -93,7 +113,9 @@ export default function HomeScreen() {
       </View>
 
       <Text style={styles.title}>오늘은 어떤 요리를{'\n'}해볼까요?</Text>
-      <Text style={styles.subtitle}>냉장고 속 재료로 간편하게{'\n'}레시피를 찾아보세요.</Text>
+      {pantry.length === 0 && (
+        <Text style={styles.subtitle}>냉장고 속 재료로 간편하게{'\n'}레시피를 찾아보세요.</Text>
+      )}
 
       <View style={styles.search}>
         <Pressable onPress={() => router.push('/camera')} hitSlop={8} accessibilityLabel="사진으로 재료 찾기">
@@ -118,6 +140,45 @@ export default function HomeScreen() {
           {notice}
         </Text>
       )}
+      {unknown.map((u) => (
+        <View key={u.name} style={styles.unknown} accessibilityLiveRegion="polite">
+          <Pressable
+            onPress={() => resolveUnknown(u.name)}
+            hitSlop={8}
+            style={styles.unknownClose}
+            accessibilityRole="button"
+            accessibilityLabel="닫기">
+            <Ionicons name="close" size={16} color={colors.textSoft} />
+          </Pressable>
+          <Text style={styles.unknownText}>
+            {u.invalid
+              ? `'${u.name}'${josa(u.name, '은', '는')} 재료 이름으로 보기 어려워요`
+              : u.suggestions.length > 0
+                ? `'${u.name}'${josa(u.name, '은', '는')} 모르는 재료예요. 혹시 이 중에 있나요?`
+                : `'${u.name}'${josa(u.name, '은', '는')} 모르는 재료예요`}
+          </Text>
+          <View style={[styles.unknownChips, u.suggestions.length === 0 && u.invalid && styles.hidden]}>
+            {u.suggestions.map((s) => (
+              <Pressable
+                key={s}
+                style={({ pressed }) => [styles.unknownChip, pressed && styles.pressed]}
+                onPress={() => resolveUnknown(u.name, s)}
+                accessibilityRole="button"
+                accessibilityLabel={`${s} 넣기`}>
+                <Text style={styles.unknownChipText}>{s}</Text>
+              </Pressable>
+            ))}
+            {!u.invalid && (
+              <Pressable
+                style={({ pressed }) => [styles.unknownChip, styles.unknownForce, pressed && styles.pressed]}
+                onPress={() => resolveUnknown(u.name, u.name)}
+                accessibilityRole="button">
+                <Text style={styles.unknownForceText}>{`그래도 '${u.name}' 넣기`}</Text>
+              </Pressable>
+            )}
+          </View>
+        </View>
+      ))}
 
       {pantry.length > 0 && <PantrySummary pantry={pantry} readyCount={readyCount} />}
       {pantry.length < WELCOME_UNTIL && (
@@ -157,19 +218,31 @@ export default function HomeScreen() {
         </>
       )}
 
-      <View style={styles.grid}>
-        {DIETS.map((d) => (
-          <Pressable key={d.id} style={({ pressed }) => [styles.gridItem, pressed && styles.pressed]} onPress={() => pickDiet(d.id)}>
-            <IngredientIcon icon={d.icon} size={36} />
-            <Text style={styles.gridLabel}>{d.label}</Text>
-          </Pressable>
-        ))}
-      </View>
+      {pantry.length === 0 ? (
+        <View style={styles.grid}>
+          {DIETS.map((d) => (
+            <Pressable key={d.id} style={({ pressed }) => [styles.gridItem, pressed && styles.pressed]} onPress={() => pickDiet(d.id)}>
+              <IngredientIcon icon={d.icon} size={36} />
+              <Text style={styles.gridLabel}>{d.label}</Text>
+            </Pressable>
+          ))}
+        </View>
+      ) : (
+        // 재료가 있으면 추천 줄이 주인공이라 카테고리는 작은 칩 한 줄로 줄인다.
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dietChips}>
+          {DIETS.map((d) => (
+            <Pressable key={d.id} style={({ pressed }) => [styles.dietChip, pressed && styles.pressed]} onPress={() => pickDiet(d.id)}>
+              <IngredientIcon icon={d.icon} size={18} />
+              <Text style={styles.dietChipText}>{d.label}</Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+      )}
 
+      {showShelf && (
+      <>
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>
-          {recent.length > 0 ? '최근 본 레시피' : pantry.length > 0 ? '다른 요리도 둘러보세요' : '이런 요리는 어때요?'}
-        </Text>
+        <Text style={styles.sectionTitle}>{recent.length > 0 ? '최근 본 레시피' : '이런 요리는 어때요?'}</Text>
         <Pressable onPress={() => router.navigate('/recipes')} hitSlop={8} style={styles.more}>
           <Text style={styles.moreText}>더보기</Text>
           <Ionicons name="chevron-forward" size={13} color={colors.textMuted} />
@@ -188,6 +261,8 @@ export default function HomeScreen() {
           </Pressable>
         ))}
       </ScrollView>
+      </>
+      )}
 
       {videoShelf.length >= 4 && (
         <>
@@ -259,11 +334,15 @@ function PantrySummary({ pantry, readyCount }: { pantry: PantryItem[]; readyCoun
   );
 }
 
-/** 마지막 글자 받침에 맞춰 조사를 붙인다 (계란을, 양파를). 한글이 아니면 받침 없는 쪽을 쓴다. */
-function withJosa(word: string, withFinal: string, withoutFinal: string): string {
+/** 마지막 글자 받침에 맞는 조사 (계란 → 을, 양파 → 를). 한글이 아니면 받침 없는 쪽을 쓴다. */
+function josa(word: string, withFinal: string, withoutFinal: string): string {
   const code = word.charCodeAt(word.length - 1) - 0xac00;
   const hasFinal = code >= 0 && code <= 11171 && code % 28 !== 0;
-  return word + (hasFinal ? withFinal : withoutFinal);
+  return hasFinal ? withFinal : withoutFinal;
+}
+
+function withJosa(word: string, withFinal: string, withoutFinal: string): string {
+  return word + josa(word, withFinal, withoutFinal);
 }
 
 const QUICK_ADD = ['계란', '양파', '두부', '대파'];
@@ -460,6 +539,72 @@ const styles = StyleSheet.create({
   matchMeta: {
     fontSize: 12,
     color: colors.textSoft,
+  },
+  unknown: {
+    marginTop: spacing.sm,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    backgroundColor: colors.accentSoft,
+    gap: spacing.sm,
+  },
+  unknownText: {
+    paddingRight: 24,
+    fontSize: 13,
+    color: '#8A3412',
+    fontWeight: '600',
+  },
+  unknownChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 6,
+  },
+  unknownChip: {
+    height: 32,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surface,
+    justifyContent: 'center',
+  },
+  unknownChipText: {
+    fontSize: 13,
+    color: colors.text,
+  },
+  unknownForce: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: '#E3B9A3',
+  },
+  unknownForceText: {
+    fontSize: 12,
+    color: '#8A3412',
+  },
+  unknownClose: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    padding: 4,
+    zIndex: 1,
+  },
+  hidden: {
+    display: 'none',
+  },
+  dietChips: {
+    gap: spacing.sm,
+    marginTop: spacing.xl,
+  },
+  dietChip: {
+    height: 36,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surfaceMuted,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  dietChipText: {
+    fontSize: 13,
+    color: colors.text,
   },
   notice: {
     marginTop: spacing.sm,
