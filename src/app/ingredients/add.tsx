@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
@@ -25,6 +25,10 @@ export default function AddIngredientsScreen() {
   const [text, setText] = useState('');
   const [message, setMessage] = useState<string | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
+  // 홈의 입력창을 눌러 들어오면 (focus=1) 바로 입력할 수 있게 키보드를 띄운다.
+  const { focus } = useLocalSearchParams<{ focus?: string }>();
+  // 모르는 재료라 넣지 않은 이름. 비슷한 재료를 고르거나 그래도 넣을 수 있다.
+  const [unknown, setUnknown] = useState<{ name: string; suggestions: string[]; invalid: boolean }[]>([]);
   const { recipes } = useRecipes();
   const vocabulary = useMemo(() => buildVocabulary(recipes), [recipes]);
 
@@ -42,23 +46,24 @@ export default function AddIngredientsScreen() {
     (n) => !owned.has(normalizeIngredient(n)),
   );
 
-  /** 쉼표로 구분한 재료를 한 번에 추가한다. 모르는 이름은 넣지 않고 입력창에 남겨 고칠 수 있게 한다. */
+  /** 쉼표로 구분한 재료를 한 번에 추가한다. 모르는 이름은 넣지 않고 비슷한 재료를 제안한다. */
   const addAll = (input: string) => {
     const names = splitIngredientInput(input);
     if (names.length === 0) return;
     const checks = names.map((name) => ({ name, check: checkIngredient(name, vocabulary) }));
-    const unknown = checks.filter((c) => !c.check.known);
-    const duplicates = checks.filter((c) => c.check.known && !addIngredient(c.name)).map((c) => c.name);
-    const lines = [
-      duplicates.length > 0 && `${duplicates.join(', ')}은(는) 이미 있어요`,
-      ...unknown.map(({ name, check }) =>
-        !check.known && check.suggestions.length > 0
-          ? `'${name}'은(는) 모르는 재료예요. 혹시 ${check.suggestions.join(', ')}?`
-          : `'${name}'은(는) 모르는 재료예요`,
+    setUnknown(
+      checks.flatMap(({ name, check }) =>
+        check.known ? [] : [{ name, suggestions: check.suggestions, invalid: check.invalid }],
       ),
-    ].filter(Boolean);
-    setMessage(lines.length > 0 ? lines.join('\n') : null);
-    setText(unknown.map((u) => u.name).join(', '));
+    );
+    const duplicates = checks.filter((c) => c.check.known && !addIngredient(c.name)).map((c) => c.name);
+    setMessage(duplicates.length > 0 ? `${duplicates.join(', ')}은(는) 이미 있어요` : null);
+    setText('');
+  };
+
+  const resolveUnknown = (name: string, pick?: string) => {
+    if (pick) setMessage(addIngredient(pick) ? null : `'${pick}'은(는) 이미 있어요`);
+    setUnknown((list) => list.filter((u) => u.name !== name));
   };
 
   const addSuggestion = (name: string) => {
@@ -106,6 +111,8 @@ export default function AddIngredientsScreen() {
                 style={styles.searchInput}
                 returnKeyType="done"
                 onSubmitEditing={() => addAll(text)}
+                submitBehavior="submit"
+                autoFocus={focus === '1'}
               />
               <Pressable onPress={() => addAll(text)} hitSlop={8} accessibilityLabel="재료 추가">
                 <Ionicons name="add" size={24} color={colors.text} />
@@ -122,6 +129,46 @@ export default function AddIngredientsScreen() {
               </View>
             )}
             {message && <Text style={styles.message}>{message}</Text>}
+            {unknown.map((u) => (
+              <View key={u.name} style={styles.unknown}>
+                <Pressable
+                  onPress={() => resolveUnknown(u.name)}
+                  hitSlop={8}
+                  style={styles.unknownClose}
+                  accessibilityRole="button"
+                  accessibilityLabel="닫기">
+                  <Ionicons name="close" size={16} color={colors.textSoft} />
+                </Pressable>
+                <Text style={styles.unknownText}>
+                  {u.invalid
+                    ? `'${u.name}'은(는) 재료 이름으로 보기 어려워요`
+                    : u.suggestions.length > 0
+                      ? `'${u.name}'은(는) 모르는 재료예요. 혹시 이 중에 있나요?`
+                      : `'${u.name}'은(는) 모르는 재료예요`}
+                </Text>
+                {!u.invalid && (
+                  <View style={styles.chips}>
+                    {u.suggestions.map((s) => (
+                      <Pressable
+                        key={s}
+                        style={styles.suggestion}
+                        onPress={() => resolveUnknown(u.name, s)}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${s} 넣기`}>
+                        <IngredientIcon name={s} size={18} />
+                        <Text style={styles.suggestionText}>{s}</Text>
+                      </Pressable>
+                    ))}
+                    <Pressable
+                      style={[styles.suggestion, styles.unknownForce]}
+                      onPress={() => resolveUnknown(u.name, u.name)}
+                      accessibilityRole="button">
+                      <Text style={styles.unknownForceText}>{`그래도 '${u.name}' 넣기`}</Text>
+                    </Pressable>
+                  </View>
+                )}
+              </View>
+            ))}
           </View>
         )}
 
@@ -251,6 +298,34 @@ const styles = StyleSheet.create({
   suggestionText: {
     fontSize: 14,
     color: colors.text,
+  },
+  unknown: {
+    padding: spacing.md,
+    borderRadius: radius.md,
+    backgroundColor: colors.accentSoft,
+    gap: spacing.sm,
+  },
+  unknownText: {
+    paddingRight: 24,
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#8A3412',
+  },
+  unknownClose: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    padding: 4,
+    zIndex: 1,
+  },
+  unknownForce: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: '#E3B9A3',
+  },
+  unknownForceText: {
+    fontSize: 12,
+    color: '#8A3412',
   },
   message: {
     fontSize: 13,

@@ -1,13 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useMemo } from 'react';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { IngredientIcon } from '@/components/IngredientIcon';
 import { RecipeImage } from '@/components/RecipeImage';
 import { DotsIcon } from '@/components/ScreenHeader';
-import { buildVocabulary, checkIngredient, splitIngredientInput } from '@/lib/ingredientInput';
 import { hasIngredient } from '@/lib/ingredients';
 import { formatMinutes, pantryNameSet, recommendRecipes } from '@/lib/recommend';
 import { formatDuration, useVideoIndex, videoThumbnail } from '@/lib/video';
@@ -20,16 +19,6 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { pantry, recentViewed, preferences, addIngredient, setPreferences } = useAppState();
   const { recipes, findRecipe } = useRecipes();
-  const [text, setText] = useState('');
-  // 방금 넣은 재료 안내 ("✓ 계란, 양파를 넣었어요"). 잠깐 보였다가 사라진다.
-  const [notice, setNotice] = useState<string | null>(null);
-  // 모르는 재료라 넣지 않은 이름. 비슷한 재료를 고르거나 그래도 넣을 수 있다.
-  const [unknown, setUnknown] = useState<{ name: string; suggestions: string[]; invalid: boolean }[]>([]);
-  useEffect(() => {
-    if (!notice) return;
-    const timer = setTimeout(() => setNotice(null), 3000);
-    return () => clearTimeout(timer);
-  }, [notice]);
   const owned = useMemo(() => pantryNameSet(pantry), [pantry]);
 
   const recent = recentViewed.flatMap((id) => findRecipe(id) ?? []);
@@ -40,7 +29,6 @@ export default function HomeScreen() {
   // 냉장고에 재료가 있으면 위에 "바로 만들 수 있어요" 줄이 나오므로, 아래 줄은 최근 본 레시피가 있을 때만 보여 준다.
   const showShelf = pantry.length === 0 || recent.length > 0;
   const shelf: Recipe[] = recent.length > 0 ? recent : recipes;
-  const vocabulary = useMemo(() => buildVocabulary(recipes), [recipes]);
 
   // 영상이 있는 레시피: 내 재료로 만들 수 있는 것부터. 영상이 적을 때는 줄을 숨긴다.
   const videos = useVideoIndex();
@@ -49,41 +37,6 @@ export default function HomeScreen() {
     const seen = new Set<string>();
     return ordered.filter((r) => videos.has(r.id) && !seen.has(r.id) && seen.add(r.id)).slice(0, 8);
   }, [suggested, recipes, videos]);
-
-  // 엔터를 치면 아는 재료만 냉장고에 넣고 홈에 머문다. 모르는 이름은 넣지 않고 비슷한 재료를 제안한다.
-  const submit = () => {
-    const names = splitIngredientInput(text);
-    if (names.length === 0) {
-      router.push('/ingredients/add');
-      return;
-    }
-    const checks = names.map((name) => ({ name, check: checkIngredient(name, vocabulary) }));
-    const knownNames = checks.filter((c) => c.check.known).map((c) => c.name);
-    setUnknown(
-      checks.flatMap(({ name, check }) =>
-        check.known ? [] : [{ name, suggestions: check.suggestions, invalid: check.invalid }],
-      ),
-    );
-    const added = knownNames.filter((n) => addIngredient(n));
-    const skipped = knownNames.filter((n) => !added.includes(n));
-    setText('');
-    setNotice(
-      [
-        added.length > 0 && `✓ ${withJosa(added.join(', '), '을', '를')} 넣었어요`,
-        skipped.length > 0 && `${withJosa(skipped.join(', '), '은', '는')} 이미 있어요`,
-      ]
-        .filter(Boolean)
-        .join(' · '),
-    );
-  };
-
-  const resolveUnknown = (name: string, pick?: string) => {
-    if (pick) {
-      const ok = addIngredient(pick);
-      setNotice(ok ? `✓ ${withJosa(pick, '을', '를')} 넣었어요` : `${withJosa(pick, '은', '는')} 이미 있어요`);
-    }
-    setUnknown((list) => list.filter((u) => u.name !== name));
-  };
 
   const pickDiet = (diet: Diet) => {
     setPreferences({ ...preferences, diet });
@@ -117,68 +70,24 @@ export default function HomeScreen() {
         <Text style={styles.subtitle}>냉장고 속 재료로 간편하게{'\n'}레시피를 찾아보세요.</Text>
       )}
 
+      {/* 홈의 입력창은 재료 등록 화면으로 가는 버튼이다. 입력·자동완성·확인은 그 화면 한 곳에서 한다. */}
       <View style={styles.search}>
         <Pressable onPress={() => router.push('/camera')} hitSlop={8} accessibilityLabel="사진으로 재료 찾기">
           <Ionicons name="camera-outline" size={20} color={colors.textSoft} />
         </Pressable>
-        <TextInput
-          value={text}
-          onChangeText={setText}
-          placeholder="재료 입력 (여러 개는 쉼표로)"
-          placeholderTextColor={colors.textMuted}
-          style={styles.searchInput}
-          returnKeyType="done"
-          onSubmitEditing={submit}
-          submitBehavior="submit"
-        />
-        <Pressable onPress={submit} style={styles.searchButton} accessibilityLabel="냉장고에 재료 넣기">
-          <Ionicons name="add" size={20} color={colors.onInk} />
+        <Pressable
+          style={styles.searchField}
+          onPress={() => router.push({ pathname: '/ingredients/add', params: { focus: '1' } })}
+          accessibilityRole="button"
+          accessibilityLabel="재료 입력하기">
+          <Text style={styles.searchPlaceholder} numberOfLines={1}>
+            냉장고 재료를 입력하세요
+          </Text>
+          <View style={styles.searchButton}>
+            <Ionicons name="add" size={20} color={colors.onInk} />
+          </View>
         </Pressable>
       </View>
-      {notice && (
-        <Text style={styles.notice} accessibilityLiveRegion="polite">
-          {notice}
-        </Text>
-      )}
-      {unknown.map((u) => (
-        <View key={u.name} style={styles.unknown} accessibilityLiveRegion="polite">
-          <Pressable
-            onPress={() => resolveUnknown(u.name)}
-            hitSlop={8}
-            style={styles.unknownClose}
-            accessibilityRole="button"
-            accessibilityLabel="닫기">
-            <Ionicons name="close" size={16} color={colors.textSoft} />
-          </Pressable>
-          <Text style={styles.unknownText}>
-            {u.invalid
-              ? `'${u.name}'${josa(u.name, '은', '는')} 재료 이름으로 보기 어려워요`
-              : u.suggestions.length > 0
-                ? `'${u.name}'${josa(u.name, '은', '는')} 모르는 재료예요. 혹시 이 중에 있나요?`
-                : `'${u.name}'${josa(u.name, '은', '는')} 모르는 재료예요`}
-          </Text>
-          <View style={[styles.unknownChips, u.suggestions.length === 0 && u.invalid && styles.hidden]}>
-            {u.suggestions.map((s) => (
-              <Pressable
-                key={s}
-                style={({ pressed }) => [styles.unknownChip, pressed && styles.pressed]}
-                onPress={() => resolveUnknown(u.name, s)}
-                accessibilityRole="button"
-                accessibilityLabel={`${s} 넣기`}>
-                <Text style={styles.unknownChipText}>{s}</Text>
-              </Pressable>
-            ))}
-            {!u.invalid && (
-              <Pressable
-                style={({ pressed }) => [styles.unknownChip, styles.unknownForce, pressed && styles.pressed]}
-                onPress={() => resolveUnknown(u.name, u.name)}
-                accessibilityRole="button">
-                <Text style={styles.unknownForceText}>{`그래도 '${u.name}' 넣기`}</Text>
-              </Pressable>
-            )}
-          </View>
-        </View>
-      ))}
 
       {pantry.length > 0 && <PantrySummary pantry={pantry} readyCount={readyCount} />}
       {pantry.length < WELCOME_UNTIL && (
@@ -334,17 +243,6 @@ function PantrySummary({ pantry, readyCount }: { pantry: PantryItem[]; readyCoun
   );
 }
 
-/** 마지막 글자 받침에 맞는 조사 (계란 → 을, 양파 → 를). 한글이 아니면 받침 없는 쪽을 쓴다. */
-function josa(word: string, withFinal: string, withoutFinal: string): string {
-  const code = word.charCodeAt(word.length - 1) - 0xac00;
-  const hasFinal = code >= 0 && code <= 11171 && code % 28 !== 0;
-  return hasFinal ? withFinal : withoutFinal;
-}
-
-function withJosa(word: string, withFinal: string, withoutFinal: string): string {
-  return word + josa(word, withFinal, withoutFinal);
-}
-
 const QUICK_ADD = ['계란', '양파', '두부', '대파'];
 /** 재료가 이만큼 모일 때까지 안내 카드를 보여 준다. 칩을 여러 개 연달아 누를 수 있게 한다. */
 const WELCOME_UNTIL = 3;
@@ -442,11 +340,18 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     backgroundColor: colors.surfaceMuted,
   },
-  searchInput: {
+  searchField: {
     flex: 1,
     minWidth: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    alignSelf: 'stretch',
+  },
+  searchPlaceholder: {
+    flex: 1,
     fontSize: 14,
-    color: colors.text,
+    color: colors.textSoft,
   },
   searchButton: {
     width: 40,
@@ -540,55 +445,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.textSoft,
   },
-  unknown: {
-    marginTop: spacing.sm,
-    padding: spacing.md,
-    borderRadius: radius.md,
-    backgroundColor: colors.accentSoft,
-    gap: spacing.sm,
-  },
-  unknownText: {
-    paddingRight: 24,
-    fontSize: 13,
-    color: '#8A3412',
-    fontWeight: '600',
-  },
-  unknownChips: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-    gap: 6,
-  },
-  unknownChip: {
-    height: 32,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.pill,
-    backgroundColor: colors.surface,
-    justifyContent: 'center',
-  },
-  unknownChipText: {
-    fontSize: 13,
-    color: colors.text,
-  },
-  unknownForce: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: '#E3B9A3',
-  },
-  unknownForceText: {
-    fontSize: 12,
-    color: '#8A3412',
-  },
-  unknownClose: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    padding: 4,
-    zIndex: 1,
-  },
-  hidden: {
-    display: 'none',
-  },
   dietChips: {
     gap: spacing.sm,
     marginTop: spacing.xl,
@@ -605,13 +461,6 @@ const styles = StyleSheet.create({
   dietChipText: {
     fontSize: 13,
     color: colors.text,
-  },
-  notice: {
-    marginTop: spacing.sm,
-    paddingHorizontal: spacing.xs,
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#1F7A47',
   },
   welcome: {
     marginTop: spacing.lg,
