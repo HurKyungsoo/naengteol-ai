@@ -74,9 +74,53 @@ const ICONS = {
     <rect x="226" y="140" width="60" height="44" rx="16" fill="#8E2E21"/>`,
 };
 
-fs.mkdirSync(SRC, { recursive: true });
-for (const [name, body] of Object.entries(ICONS)) {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">${body}</svg>`;
-  fs.writeFileSync(path.join(SRC, `${name}.png`), new Resvg(svg).render().asPng());
+// 장면 레이어: 앱에서 [뒤 레이어] → 재료 아이콘 → [앞 레이어] 순서로 겹쳐 "냄비 속 감자"처럼 보여 준다
+// (src/components/StepScene.tsx). 모든 레이어는 같은 512 캔버스 좌표를 쓴다.
+const LAYERS = {
+  board: `
+    <rect x="30" y="250" width="452" height="230" rx="50" fill="#E2AE6E"/>
+    <rect x="30" y="250" width="452" height="50" rx="25" fill="#ECC089"/>
+    <circle cx="448" cy="276" r="13" fill="#C98E4C"/>`,
+  'knife-over': `
+    <g transform="rotate(-12 256 120)">
+      <path d="M150 104 H430 l26 22 H150z" fill="#DCE2E8"/>
+      <path d="M150 104 H430 l26 22z" fill="#C3CBD3"/>
+      <rect x="30" y="100" width="130" height="44" rx="22" fill="#4A3426"/>
+    </g>`,
+  'pan-empty': `
+    <rect x="360" y="250" width="150" height="44" rx="22" transform="rotate(-14 435 272)" fill="#9A5F2E"/>
+    <ellipse cx="236" cy="300" rx="220" ry="160" fill="#3E434A"/>
+    <ellipse cx="236" cy="292" rx="186" ry="130" fill="#59606A"/>`,
+  'pot-back': `
+    <path d="M200 130 c-20 -30 20 -50 0 -80" fill="none" stroke="#D5DADF" stroke-width="18" stroke-linecap="round"/>
+    <path d="M312 130 c-20 -30 20 -50 0 -80" fill="none" stroke="#D5DADF" stroke-width="18" stroke-linecap="round"/>
+    <ellipse cx="256" cy="250" rx="186" ry="42" fill="#7E281D"/>`,
+  'pot-front': `
+    <rect x="22" y="290" width="80" height="40" rx="20" fill="#B83A2A"/>
+    <rect x="410" y="290" width="80" height="40" rx="20" fill="#B83A2A"/>
+    <path d="M86 262 h340 v150 a62 62 0 0 1 -62 62 h-216 a62 62 0 0 1 -62 -62z" fill="#E2553F"/>
+    <rect x="86" y="262" width="340" height="50" fill="#EC7560"/>
+    <path d="M70 250 a186 42 0 0 0 372 0 v22 a186 42 0 0 1 -372 0z" fill="#C9442F"/>`,
+  'bowl-back': `
+    <ellipse cx="256" cy="246" rx="206" ry="40" fill="#4B93C2"/>`,
+  'bowl-front': `
+    <path d="M50 246 h412 c0 126 -92 210 -206 210 s-206 -84 -206 -210z" fill="#7FC4E8"/>
+    <path d="M50 246 h412 c0 28 -5 52 -13 76 H63 c-8 -24 -13 -48 -13 -76z" fill="#9AD3F0"/>
+    <path d="M50 246 a206 40 0 0 0 412 0 v14 a206 40 0 0 1 -412 0z" fill="#5EA9D6"/>`,
+  'plate-empty': `
+    <ellipse cx="256" cy="320" rx="236" ry="132" fill="#E6E9ED"/>
+    <ellipse cx="256" cy="310" rx="236" ry="126" fill="#FFFFFF"/>
+    <ellipse cx="256" cy="310" rx="160" ry="82" fill="#F1F3F5"/>`,
+};
+
+function renderAll(shapes, srcDir, outDir) {
+  fs.mkdirSync(srcDir, { recursive: true });
+  for (const [name, body] of Object.entries(shapes)) {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">${body}</svg>`;
+    fs.writeFileSync(path.join(srcDir, `${name}.png`), new Resvg(svg).render().asPng());
+  }
+  execFileSync(process.execPath, [path.join(ROOT, 'scripts', 'stylize-icons.mjs'), srcDir, outDir], { stdio: 'inherit' });
 }
-execFileSync(process.execPath, [path.join(ROOT, 'scripts', 'stylize-icons.mjs'), SRC, OUT], { stdio: 'inherit' });
+
+renderAll(ICONS, SRC, OUT);
+renderAll(LAYERS, path.join(OUT, 'layers', 'src'), path.join(OUT, 'layers'));

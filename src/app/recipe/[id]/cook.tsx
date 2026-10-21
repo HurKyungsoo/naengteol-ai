@@ -8,6 +8,7 @@ import { Bullet } from '@/components/GuideSection';
 import { IngredientIcon } from '@/components/IngredientIcon';
 import { BottomBar, PrimaryButton } from '@/components/PrimaryButton';
 import { RecipeImage } from '@/components/RecipeImage';
+import { StepScene } from '@/components/StepScene';
 import { goBack, ScreenHeader } from '@/components/ScreenHeader';
 import { useRecipeGuide } from '@/lib/guide';
 import { STEP_ICONS, stepSubject, stepHeat, stepIngredients, stepKind, stepTime } from '@/lib/stepInfo';
@@ -206,19 +207,14 @@ export default function CookScreen() {
   );
 }
 
-/** 사진이 없는 단계의 그림. 주인공 재료를 크게, 동작(냄비·팬 등)은 오른쪽 아래 배지로. 재료가 없으면 동작만. */
+/** 사진이 없는 단계의 그림. 주인공 재료가 있으면 "도마 위 썰린 토마토"처럼 장면으로, 없으면 동작 아이콘만. */
 function StepTile({ recipe, step, done }: { recipe: Recipe; step: RecipeStep; done: boolean }) {
   const kind = stepKind(step);
   const subject = stepSubject(recipe, step);
   return (
     <View style={[styles.stepIcon, done && styles.stepIconDone]}>
-      {subject ? (
-        <>
-          <IngredientIcon name={subject} size={50} />
-          <View style={styles.stepBadge}>
-            <Image source={STEP_ICONS[kind]} style={styles.stepBadgeImage} resizeMode="contain" />
-          </View>
-        </>
+      {subject && kind !== 'roll' ? (
+        <StepScene kind={kind} ingredient={subject} size={72} />
       ) : (
         <Image source={STEP_ICONS[kind]} style={styles.stepIconImage} resizeMode="contain" />
       )}
@@ -325,6 +321,7 @@ const styles = StyleSheet.create({
   stepIcon: {
     width: 72,
     height: 72,
+    overflow: 'hidden',
     borderRadius: radius.md,
     backgroundColor: '#FFF4E3',
     alignItems: 'center',
@@ -336,22 +333,6 @@ const styles = StyleSheet.create({
   stepIconImage: {
     width: 58,
     height: 58,
-  },
-  stepBadge: {
-    position: 'absolute',
-    right: -4,
-    bottom: -4,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-    boxShadow: '0px 2px 6px rgba(0, 0, 0, 0.12)',
-  },
-  stepBadgeImage: {
-    width: 26,
-    height: 26,
   },
   stepChips: {
     flexDirection: 'row',
