@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Bullet } from '@/components/GuideSection';
@@ -10,10 +10,12 @@ import { BottomBar, PrimaryButton } from '@/components/PrimaryButton';
 import { RecipeImage } from '@/components/RecipeImage';
 import { goBack, ScreenHeader } from '@/components/ScreenHeader';
 import { useRecipeGuide } from '@/lib/guide';
+import { STEP_ICONS, stepHeat, stepIngredients, stepKind, stepTime } from '@/lib/stepInfo';
 import { normalizeIngredient, substitutesFor } from '@/lib/ingredients';
 import { useAppState } from '@/state/AppState';
 import { useRecipes } from '@/state/RecipesProvider';
 import { colors, radius, spacing } from '@/theme';
+import type { Recipe, RecipeStep } from '@/types';
 
 export default function CookScreen() {
   const insets = useSafeAreaInsets();
@@ -112,13 +114,18 @@ export default function CookScreen() {
                 {!last && <View style={styles.line} />}
               </View>
               <View style={[styles.card, isDone && styles.cardDone]}>
-                {/* 단계 사진이 있을 때만 보여 준다. 없을 때 완성 사진·아이콘을 반복하면 단계가 구분되지 않는다. */}
-                {step.image && (
+                {/* 단계 사진이 있으면 사진, 없으면(샘플 레시피) 동작 아이콘 */}
+                {step.image ? (
                   <RecipeImage recipe={recipe} imageUri={step.image} width={72} height={72} radius={radius.md} />
+                ) : (
+                  <View style={[styles.stepIcon, isDone && styles.stepIconDone]}>
+                    <Image source={STEP_ICONS[stepKind(step)]} style={styles.stepIconImage} resizeMode="contain" />
+                  </View>
                 )}
                 <View style={styles.cardBody}>
                   {step.title && <Text style={styles.stepTitle}>{step.title}</Text>}
                   <Text style={styles.stepText}>{step.text}</Text>
+                  <StepChips recipe={recipe} step={step} />
                   {tips.length > 0 && (
                     <Pressable
                       onPress={(e) => {
@@ -201,6 +208,36 @@ export default function CookScreen() {
   );
 }
 
+/** 단계의 핵심 정보: 시간, 불 세기, 들어가는 재료 */
+function StepChips({ recipe, step }: { recipe: Recipe; step: RecipeStep }) {
+  const time = stepTime(step);
+  const heat = stepHeat(step);
+  const ingredients = stepIngredients(recipe, step);
+  if (!time && !heat && ingredients.length === 0) return null;
+  return (
+    <View style={styles.stepChips}>
+      {time && (
+        <View style={[styles.stepChip, styles.timeChip]}>
+          <Ionicons name="timer-outline" size={13} color={colors.onInk} />
+          <Text style={styles.timeChipText}>{time}</Text>
+        </View>
+      )}
+      {heat && (
+        <View style={[styles.stepChip, styles.heatChip]}>
+          <Ionicons name="flame-outline" size={13} color="#B8461A" />
+          <Text style={styles.heatChipText}>{heat}</Text>
+        </View>
+      )}
+      {ingredients.map((name) => (
+        <View key={name} style={[styles.stepChip, styles.ingredientChip]}>
+          <IngredientIcon name={name} size={16} />
+          <Text style={styles.ingredientChipText}>{name}</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
@@ -266,6 +303,59 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     gap: 4,
+  },
+  stepIcon: {
+    width: 72,
+    height: 72,
+    borderRadius: radius.md,
+    backgroundColor: '#FFF4E3',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepIconDone: {
+    backgroundColor: colors.successSoft,
+  },
+  stepIconImage: {
+    width: 58,
+    height: 58,
+  },
+  stepChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 4,
+  },
+  stepChip: {
+    height: 26,
+    paddingHorizontal: 9,
+    borderRadius: radius.pill,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  timeChip: {
+    backgroundColor: colors.ink,
+  },
+  timeChipText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.onInk,
+  },
+  heatChip: {
+    backgroundColor: colors.accentSoft,
+  },
+  heatChipText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#8A3412',
+  },
+  ingredientChip: {
+    paddingLeft: 5,
+    backgroundColor: colors.surface,
+  },
+  ingredientChipText: {
+    fontSize: 12,
+    color: colors.text,
   },
   stepTitle: {
     fontSize: 15,
