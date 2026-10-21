@@ -49,6 +49,10 @@ export function useStepTimers() {
     setTimers((prev) => prev.filter((x) => x.index !== index));
   };
 
+  /** 1분 더 (덜 익었을 때) */
+  const addMinute = (index: number) =>
+    setTimers((prev) => prev.map((x) => (x.index === index ? { ...x, endAt: x.endAt + 60_000, total: x.total + 60 } : x)));
+
   /** 남은 초 (끝났으면 0) */
   const remaining = (timer: StepTimer) => Math.max(0, Math.ceil((timer.endAt - now) / 1000));
 
@@ -57,7 +61,7 @@ export function useStepTimers() {
 
   const find = (index: number) => timers.find((x) => x.index === index);
 
-  return { timers, start, stop, remaining, fraction, find };
+  return { timers, start, stop, addMinute, remaining, fraction, find };
 }
 
 /** 265 → "4:25" */
