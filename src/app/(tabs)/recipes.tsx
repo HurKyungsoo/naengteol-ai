@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { RecipeListItem } from '@/components/RecipeListItem';
 import { ScreenHeader } from '@/components/ScreenHeader';
@@ -11,13 +11,13 @@ import { useVideoIndex } from '@/lib/video';
 import { useAppState } from '@/state/AppState';
 import { useRecipes } from '@/state/RecipesProvider';
 import { colors, radius, spacing } from '@/theme';
-import { CUISINES, DIETS, type Cuisine } from '@/types';
+import { CUISINES, DIETS, type Cuisine, type Preferences } from '@/types';
 
 // 'video'는 참고 영상이 있는 레시피만 보여 준다.
 type Tab = 'all' | 'video' | Cuisine;
 
 export default function RecipesScreen() {
-  const { pantry, preferences } = useAppState();
+  const { pantry, preferences, setPreferences } = useAppState();
   const { recipes } = useRecipes();
   const [tab, setTab] = useState<Tab>('all');
   const videos = useVideoIndex();
@@ -28,12 +28,20 @@ export default function RecipesScreen() {
     tab === 'video' ? videos.has(m.recipe.id) : matchesTab(m.recipe, tab === 'all' ? undefined : tab),
   );
 
-  const conditions = [
-    preferences.diet && DIETS.find((d) => d.id === preferences.diet)?.label,
-    preferences.maxMinutes && `${preferences.maxMinutes}분 이내`,
-    preferences.difficulty,
-    preferences.servings,
-  ].filter(Boolean);
+  // 지금 걸린 조건을 칩으로 보여 주고, ✕로 바로 뺄 수 있게 한다.
+  const unset = (patch: Partial<Preferences>) => setPreferences({ ...preferences, ...patch });
+  const excluded = preferences.excluded ?? [];
+  const chips: { label: string; onRemove: () => void }[] = [
+    ...(preferences.diet
+      ? [{ label: DIETS.find((d) => d.id === preferences.diet)?.label ?? preferences.diet, onRemove: () => unset({ diet: undefined }) }]
+      : []),
+    ...(preferences.maxMinutes
+      ? [{ label: `${preferences.maxMinutes}분 이내`, onRemove: () => unset({ maxMinutes: undefined }) }]
+      : []),
+    ...(preferences.difficulty ? [{ label: preferences.difficulty, onRemove: () => unset({ difficulty: undefined }) }] : []),
+    ...(preferences.servings ? [{ label: preferences.servings, onRemove: () => unset({ servings: undefined }) }] : []),
+    ...(preferences.preferOwned ? [{ label: '냉장고 재료만', onRemove: () => unset({ preferOwned: false }) }] : []),
+  ];
 
   return (
     <View style={styles.screen}>
@@ -53,15 +61,39 @@ export default function RecipesScreen() {
               value={tab}
               onChange={setTab}
             />
-            <Pressable style={styles.conditions} onPress={() => router.push('/preferences')}>
-              <Ionicons name="options-outline" size={16} color={colors.textSoft} />
-              <Text style={styles.conditionsText} numberOfLines={1}>
-                {[...(preferences.preferOwned ? ['보유 재료 우선'] : []), ...conditions].join(' · ') ||
-                  '조건 없이 모든 레시피'}
-                {preferences.preferOwned && conditions.length === 0 ? ' · 다른 조건 없음' : ''}
-              </Text>
-              <Text style={styles.conditionsEdit}>변경</Text>
-            </Pressable>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.conditions}>
+              <Pressable
+                style={({ pressed }) => [styles.condEdit, pressed && styles.pressed]}
+                onPress={() => router.push('/preferences')}
+                accessibilityRole="button"
+                accessibilityLabel="추천 조건 바꾸기">
+                <Ionicons name="options-outline" size={15} color={colors.text} />
+                <Text style={styles.condEditText}>조건</Text>
+              </Pressable>
+              {chips.map((c) => (
+                <Pressable
+                  key={c.label}
+                  style={({ pressed }) => [styles.condChip, pressed && styles.pressed]}
+                  onPress={c.onRemove}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${c.label} 조건 빼기`}>
+                  <Text style={styles.condChipText}>{c.label}</Text>
+                  <Ionicons name="close" size={13} color={colors.onInk} />
+                </Pressable>
+              ))}
+              {excluded.length > 0 && (
+                <Pressable
+                  style={({ pressed }) => [styles.condExcluded, pressed && styles.pressed]}
+                  onPress={() => router.push('/preferences')}
+                  accessibilityRole="button">
+                  <Text style={styles.condExcludedText}>
+                    {excluded[0]}
+                    {excluded.length > 1 ? ` 외 ${excluded.length - 1}개` : ''} 제외
+                  </Text>
+                </Pressable>
+              )}
+              {chips.length === 0 && excluded.length === 0 && <Text style={styles.condNone}>조건 없이 모든 레시피</Text>}
+            </ScrollView>
           </View>
         }
         ItemSeparatorComponent={() => <View style={styles.separator} />}
@@ -79,7 +111,7 @@ export default function RecipesScreen() {
             </Pressable>
           </View>
         }
-        renderItem={({ item }) => <RecipeListItem recipe={item.recipe} owned={owned} />}
+        renderItem={({ item }) => <RecipeListItem recipe={item.recipe} owned={owned} soon={item.soon} />}
       />
     </View>
   );
@@ -99,23 +131,56 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   conditions: {
-    flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+  },
+  condEdit: {
+    height: 32,
     paddingHorizontal: spacing.md,
-    height: 38,
-    borderRadius: radius.md,
-    backgroundColor: colors.surfaceMuted,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.border,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
-  conditionsText: {
-    flex: 1,
-    fontSize: 13,
-    color: colors.textSoft,
-  },
-  conditionsEdit: {
+  condEditText: {
     fontSize: 13,
     fontWeight: '700',
     color: colors.text,
+  },
+  condChip: {
+    height: 32,
+    paddingLeft: spacing.md,
+    paddingRight: 10,
+    borderRadius: radius.pill,
+    backgroundColor: colors.ink,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  condChipText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.onInk,
+  },
+  condExcluded: {
+    height: 32,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.pill,
+    backgroundColor: '#FFF6F1',
+    justifyContent: 'center',
+  },
+  condExcludedText: {
+    fontSize: 13,
+    color: '#C2360C',
+  },
+  condNone: {
+    fontSize: 13,
+    color: colors.textMuted,
+  },
+  pressed: {
+    opacity: 0.7,
   },
   separator: {
     height: 1,

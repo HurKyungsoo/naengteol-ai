@@ -43,7 +43,7 @@ function formatDate(ts: number): string {
 export default function PantryScreen() {
   const params = useLocalSearchParams<{ tab?: Tab }>();
   const insets = useSafeAreaInsets();
-  const { pantry, cookLogs, removeIngredient, setBought } = useAppState();
+  const { pantry, cookLogs, preferences, removeIngredient, setBought } = useAppState();
   const { recipes, findRecipe } = useRecipes();
   const [tab, setTab] = useState<Tab>(params.tab ?? 'owned');
   const [editMode, setEditMode] = useState(false);
@@ -59,7 +59,11 @@ export default function PantryScreen() {
     if (params.tab) setTab(params.tab);
   }
 
-  const matches = useMemo(() => recommendRecipes(recipes, pantry, { preferOwned: true }), [recipes, pantry]);
+  const excluded = preferences.excluded;
+  const matches = useMemo(
+    () => recommendRecipes(recipes, pantry, { preferOwned: true, soonFirst: false, excluded }),
+    [recipes, pantry, excluded],
+  );
   // 재료가 다 갖춰진 요리가 있을 때만 아래 추천 패널을 띄운다.
   const ready = useMemo(() => matches.filter((m) => m.missing.length === 0), [matches]);
   const soon = useMemo(() => expiringItems(pantry, now), [pantry, now]);

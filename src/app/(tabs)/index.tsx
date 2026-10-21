@@ -22,7 +22,12 @@ export default function HomeScreen() {
   const owned = useMemo(() => pantryNameSet(pantry), [pantry]);
 
   const recent = recentViewed.flatMap((id) => findRecipe(id) ?? []);
-  const matches = useMemo(() => recommendRecipes(recipes, pantry, { preferOwned: true }), [recipes, pantry]);
+  // 홈은 "곧 상하는 재료부터 써요" 줄이 따로 있어서 여기서는 그 재료를 위로 올리지 않는다.
+  const excluded = preferences.excluded;
+  const matches = useMemo(
+    () => recommendRecipes(recipes, pantry, { preferOwned: true, soonFirst: false, excluded }),
+    [recipes, pantry, excluded],
+  );
   const suggested = useMemo(() => matches.map((m) => m.recipe), [matches]);
   const readyCount = matches.filter((m) => m.missing.length === 0).length;
   const soon = useMemo(() => expiringItems(pantry), [pantry]);

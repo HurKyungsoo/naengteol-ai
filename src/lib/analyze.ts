@@ -21,7 +21,8 @@ export type AnalyzeResult = {
 const ENDPOINT = ANALYZE_URL;
 /** Supabase publishable 키. 공개돼도 되는 키이며, 서버 함수가 APP_KEY와 비교해 앱의 요청인지 확인한다. */
 const APP_KEY = SUPABASE_KEY;
-const TIMEOUT_MS = 30_000;
+// Gemini 응답이 느린 날은 한 장에 20~40초 걸리기도 해서 넉넉히 기다린다. 화면에는 기다리는 동안 안내를 보여 준다.
+const TIMEOUT_MS = 60_000;
 
 const ERROR_MESSAGES: Record<number, string> = {
   401: '사진 분석 서버 설정이 맞지 않아요.',

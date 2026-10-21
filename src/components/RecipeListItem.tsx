@@ -14,9 +14,11 @@ type Props = {
   owned: Set<string>;
   /** 재료 태그 대신 "15분 · 쉬움" 한 줄만 보여준다 (즐겨찾기) */
   compact?: boolean;
+  /** 이 레시피가 쓰는 곧 상하는 냉장고 재료. 있으면 맨 앞에 표시한다. */
+  soon?: string[];
 };
 
-export function RecipeListItem({ recipe, owned, compact = false }: Props) {
+export function RecipeListItem({ recipe, owned, compact = false, soon = [] }: Props) {
   const { favorites, toggleFavorite } = useAppState();
   const isFavorite = favorites.includes(recipe.id);
   const core = coreIngredients(recipe);
@@ -44,7 +46,8 @@ export function RecipeListItem({ recipe, owned, compact = false }: Props) {
         </View>
         {!compact && (
           <View style={styles.tags}>
-            {core.slice(0, 3).map((i) => {
+            {soon.length > 0 && <Text style={[styles.tag, styles.tagSoon]}>곧 상하는 {soon.join('·')}</Text>}
+            {core.slice(0, soon.length > 0 ? 2 : 3).map((i) => {
               const has = hasIngredient(owned, i.name);
               return (
                 <Text key={i.name} style={[styles.tag, !has && styles.tagMissing]}>
@@ -133,6 +136,11 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     borderRadius: radius.sm,
     overflow: 'hidden',
+  },
+  tagSoon: {
+    color: '#C2360C',
+    backgroundColor: '#FFE8DE',
+    fontWeight: '700',
   },
   tagMissing: {
     color: colors.textMuted,
