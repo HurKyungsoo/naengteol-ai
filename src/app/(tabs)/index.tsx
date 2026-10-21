@@ -94,17 +94,19 @@ export default function HomeScreen() {
         </Pressable>
       </View>
 
-      <Pressable style={styles.pantryLink} onPress={() => router.navigate('/pantry')}>
-        <Text style={styles.pantryLinkText} numberOfLines={1}>
-          {pantry.length > 0
-            ? `내 냉장고 ${pantry.length}개 · ${pantry
-                .slice(0, 3)
-                .map((p) => p.name)
-                .join(', ')}${pantry.length > 3 ? ' …' : ''}`
-            : '냉장고가 비어 있어요. 재료를 등록해 보세요'}
-        </Text>
-        <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
-      </Pressable>
+      {pantry.length > 0 ? (
+        <Pressable style={styles.pantryLink} onPress={() => router.navigate('/pantry')}>
+          <Text style={styles.pantryLinkText} numberOfLines={1}>
+            {`내 냉장고 ${pantry.length}개 · ${pantry
+              .slice(0, 3)
+              .map((p) => p.name)
+              .join(', ')}${pantry.length > 3 ? ' …' : ''}`}
+          </Text>
+          <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
+        </Pressable>
+      ) : (
+        <WelcomeCard onQuickAdd={(name) => addIngredient(name)} />
+      )}
 
       <View style={styles.grid}>
         {DIETS.map((d) => (
@@ -175,6 +177,42 @@ export default function HomeScreen() {
   );
 }
 
+const QUICK_ADD = ['계란', '양파', '두부', '대파'];
+
+/** 냉장고가 비어 있을 때(첫 실행) 검색창 아래에 보여 주는 안내 카드. 재료가 생기면 사라진다. */
+function WelcomeCard({ onQuickAdd }: { onQuickAdd: (name: string) => void }) {
+  return (
+    <View style={styles.welcome}>
+      <View style={styles.welcomeStickers} pointerEvents="none">
+        <IngredientIcon icon="tomato" size={52} style={styles.welcomeTomato} />
+        <IngredientIcon icon="egg" size={42} style={styles.welcomeEgg} />
+      </View>
+      <Text style={styles.welcomeEyebrow}>처음 오셨네요</Text>
+      <Text style={styles.welcomeTitle}>냉장고 재료부터{'\n'}등록해 볼까요?</Text>
+      <Text style={styles.welcomeBody}>사진 한 장이면 AI가 재료를 찾아 줘요.</Text>
+      <Pressable
+        style={({ pressed }) => [styles.welcomeButton, pressed && styles.pressed]}
+        onPress={() => router.push('/camera')}
+        accessibilityRole="button">
+        <Ionicons name="camera-outline" size={18} color={colors.onInk} />
+        <Text style={styles.welcomeButtonText}>사진으로 등록</Text>
+      </Pressable>
+      <View style={styles.quickRow}>
+        {QUICK_ADD.map((name) => (
+          <Pressable
+            key={name}
+            style={({ pressed }) => [styles.quickChip, pressed && styles.pressed]}
+            onPress={() => onQuickAdd(name)}
+            accessibilityRole="button"
+            accessibilityLabel={`${name} 추가`}>
+            <Text style={styles.quickChipText}>+ {name}</Text>
+          </Pressable>
+        ))}
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
@@ -235,6 +273,81 @@ const styles = StyleSheet.create({
     gap: 4,
     marginTop: spacing.md,
     paddingHorizontal: spacing.xs,
+  },
+  welcome: {
+    marginTop: spacing.lg,
+    padding: spacing.xl - 4,
+    gap: 6,
+    borderRadius: radius.xl - 4,
+    backgroundColor: colors.accentSoft,
+    overflow: 'hidden',
+  },
+  welcomeStickers: {
+    position: 'absolute',
+    top: 12,
+    right: 10,
+    width: 110,
+    height: 90,
+  },
+  welcomeTomato: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    transform: [{ rotate: '10deg' }],
+  },
+  welcomeEgg: {
+    position: 'absolute',
+    right: 50,
+    top: 34,
+    transform: [{ rotate: '-12deg' }],
+  },
+  welcomeEyebrow: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#B8461A',
+  },
+  welcomeTitle: {
+    fontSize: 18,
+    lineHeight: 25,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  welcomeBody: {
+    fontSize: 13,
+    color: colors.textSoft,
+  },
+  welcomeButton: {
+    marginTop: spacing.sm,
+    height: 48,
+    borderRadius: radius.pill,
+    backgroundColor: colors.ink,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  welcomeButtonText: {
+    color: colors.onInk,
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  quickRow: {
+    marginTop: spacing.xs,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 6,
+  },
+  quickChip: {
+    height: 32,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surface,
+    justifyContent: 'center',
+  },
+  quickChipText: {
+    fontSize: 13,
+    color: colors.text,
   },
   pantryLinkText: {
     flexShrink: 1,
