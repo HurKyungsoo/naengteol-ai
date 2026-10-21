@@ -165,7 +165,7 @@ export default function AddIngredientsScreen() {
           <View style={styles.ownedGrid}>
             {pantry.map((p) => (
               <View key={p.id} style={styles.ownedItem}>
-                <IngredientIcon name={p.name} size={24} />
+                <IngredientIcon name={p.name} size={32} tile />
                 <View style={styles.ownedText}>
                   <Text style={styles.ownedName} numberOfLines={1}>
                     {p.name}

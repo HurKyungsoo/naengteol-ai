@@ -6,6 +6,10 @@ https://www.flaticon.com/legal
 
 앱용 아이콘(assets/ingredients/*.png)은 아래 원본 PNG에 그림자·빛 반사 효과를 더해 다시 만든 것이다 (scripts/stylize-icons.mjs).
 
+아래 원본 중 일부는 알아보기 쉽도록 색을 바꿔 넣었다: tofu(노랑 → 흰 두부색), kimchi(주황 → 고춧가루 빨강),
+bacon(붉은 살 → 분홍 돼지고기), jujube(빨강 → 검붉은 대추색), candy(하늘색 → 흰 각설탕).
+gim.png는 Flaticon 원본이 아니라 이 프로젝트에서 직접 그린 김 아이콘이다.
+
 egg             계란         https://www.flaticon.com/free-icon/egg_837560
 cooked-rice     밥          https://www.flaticon.com/free-icon/rice_2592747
 leafy-green     상추·잎채소     https://www.flaticon.com/free-icon/lettuce_1515026
@@ -58,7 +62,7 @@ green-onion     대파         https://www.flaticon.com/free-icon/leek_5346195
 tofu            두부         https://www.flaticon.com/free-icon/tofu_1687170
 doenjang        된장         https://www.flaticon.com/free-icon/miso_7472432
 gochujang       고추장        https://www.flaticon.com/free-icon/gochujang_12971405
-gim             김(주먹밥으로 대신) https://www.flaticon.com/free-icon/onigiri_5896686
+gim             김          직접 그림 (Flaticon 원본 아님)
 cabbage         양배추        https://www.flaticon.com/free-icon/cabbage_859319
 zucchini        애호박        https://www.flaticon.com/free-icon/zucchini_1515034
 soy-sauce       간장         https://www.flaticon.com/free-icon/soy-sauce_4391852

@@ -65,7 +65,7 @@
 | `tofu.png` | 두부 | [tofu](https://www.flaticon.com/free-icon/tofu_1687170) |
 | `doenjang.png` | 된장 | [miso](https://www.flaticon.com/free-icon/miso_7472432) |
 | `gochujang.png` | 고추장 | [gochujang](https://www.flaticon.com/free-icon/gochujang_12971405) |
-| `gim.png` | 김(주먹밥으로 대신) | [onigiri](https://www.flaticon.com/free-icon/onigiri_5896686) |
+| `gim.png` | 김 | 직접 그림 (받지 않는다) |
 | `cabbage.png` | 양배추 | [cabbage](https://www.flaticon.com/free-icon/cabbage_859319) |
 | `zucchini.png` | 애호박 | [zucchini](https://www.flaticon.com/free-icon/zucchini_1515034) |
 | `soy-sauce.png` | 간장 | [soy-sauce](https://www.flaticon.com/free-icon/soy-sauce_4391852) |
