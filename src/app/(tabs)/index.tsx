@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -20,6 +20,13 @@ export default function HomeScreen() {
   const { pantry, recentViewed, preferences, addIngredient, setPreferences } = useAppState();
   const { recipes, findRecipe } = useRecipes();
   const [text, setText] = useState('');
+  // 방금 넣은 재료 안내 ("✓ 계란, 양파를 넣었어요"). 잠깐 보였다가 사라진다.
+  const [notice, setNotice] = useState<string | null>(null);
+  useEffect(() => {
+    if (!notice) return;
+    const timer = setTimeout(() => setNotice(null), 3000);
+    return () => clearTimeout(timer);
+  }, [notice]);
   const owned = useMemo(() => pantryNameSet(pantry), [pantry]);
 
   const recent = recentViewed.flatMap((id) => findRecipe(id) ?? []);
@@ -37,15 +44,25 @@ export default function HomeScreen() {
     return ordered.filter((r) => videos.has(r.id) && !seen.has(r.id) && seen.add(r.id)).slice(0, 8);
   }, [suggested, recipes, videos]);
 
+  // 엔터를 치면 냉장고에 넣고 홈에 머문다. 여러 번 넣은 뒤 [레시피 추천받기]로 넘어간다.
+  // "닭 가슴살"처럼 띄어 쓴 재료가 있어서 쉼표로만 나눈다 (재료 등록 화면과 같은 규칙).
   const submit = () => {
-    const names = text.split(/[,\s]+/).filter(Boolean);
+    const names = text.split(/[,，\n]+/).map((n) => n.trim()).filter(Boolean);
     if (names.length === 0) {
       router.push('/ingredients/add');
       return;
     }
-    names.forEach((n) => addIngredient(n));
+    const added = names.filter((n) => addIngredient(n));
+    const skipped = names.filter((n) => !added.includes(n));
     setText('');
-    router.push('/preferences');
+    setNotice(
+      [
+        added.length > 0 && `✓ ${withJosa(added.join(', '), '을', '를')} 넣었어요`,
+        skipped.length > 0 && `${withJosa(skipped.join(', '), '은', '는')} 이미 있어요`,
+      ]
+        .filter(Boolean)
+        .join(' · '),
+    );
   };
 
   const pickDiet = (diet: Diet) => {
@@ -85,16 +102,22 @@ export default function HomeScreen() {
         <TextInput
           value={text}
           onChangeText={setText}
-          placeholder="재료를 입력하거나 사진을 올려보세요"
+          placeholder="재료 입력 (여러 개는 쉼표로)"
           placeholderTextColor={colors.textMuted}
           style={styles.searchInput}
-          returnKeyType="search"
+          returnKeyType="done"
           onSubmitEditing={submit}
+          submitBehavior="submit"
         />
-        <Pressable onPress={submit} style={styles.searchButton} accessibilityLabel="재료로 레시피 찾기">
-          <Ionicons name="arrow-forward" size={18} color={colors.onInk} />
+        <Pressable onPress={submit} style={styles.searchButton} accessibilityLabel="냉장고에 재료 넣기">
+          <Ionicons name="add" size={20} color={colors.onInk} />
         </Pressable>
       </View>
+      {notice && (
+        <Text style={styles.notice} accessibilityLiveRegion="polite">
+          {notice}
+        </Text>
+      )}
 
       {pantry.length > 0 && (
         <Pressable style={styles.pantryLink} onPress={() => router.navigate('/pantry')}>
@@ -105,6 +128,15 @@ export default function HomeScreen() {
               .join(', ')}${pantry.length > 3 ? ' …' : ''}`}
           </Text>
           <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
+        </Pressable>
+      )}
+      {pantry.length > 0 && (
+        <Pressable
+          style={({ pressed }) => [styles.recommend, pressed && styles.pressed]}
+          onPress={() => router.push('/preferences')}
+          accessibilityRole="button">
+          <Text style={styles.recommendText}>이 재료로 레시피 추천받기</Text>
+          <Ionicons name="arrow-forward" size={16} color={colors.onInk} />
         </Pressable>
       )}
       {pantry.length < WELCOME_UNTIL && (
@@ -178,6 +210,13 @@ export default function HomeScreen() {
       )}
     </ScrollView>
   );
+}
+
+/** 마지막 글자 받침에 맞춰 조사를 붙인다 (계란을, 양파를). 한글이 아니면 받침 없는 쪽을 쓴다. */
+function withJosa(word: string, withFinal: string, withoutFinal: string): string {
+  const code = word.charCodeAt(word.length - 1) - 0xac00;
+  const hasFinal = code >= 0 && code <= 11171 && code % 28 !== 0;
+  return word + (hasFinal ? withFinal : withoutFinal);
 }
 
 const QUICK_ADD = ['계란', '양파', '두부', '대파'];
@@ -297,6 +336,28 @@ const styles = StyleSheet.create({
     gap: 4,
     marginTop: spacing.md,
     paddingHorizontal: spacing.xs,
+  },
+  notice: {
+    marginTop: spacing.sm,
+    paddingHorizontal: spacing.xs,
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#1F7A47',
+  },
+  recommend: {
+    marginTop: spacing.md,
+    height: 48,
+    borderRadius: radius.pill,
+    backgroundColor: colors.ink,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  recommendText: {
+    color: colors.onInk,
+    fontSize: 15,
+    fontWeight: '700',
   },
   welcome: {
     marginTop: spacing.lg,
