@@ -112,6 +112,8 @@ Deno.serve(async (req) => {
           responseMimeType: 'application/json',
           responseSchema: RESPONSE_SCHEMA,
           temperature: 0.2,
+          // 재료 이름 목록만 뽑으면 되므로 길게 생각할 필요가 없다. 생각이 길어지면 30초를 넘기기도 했다.
+          thinkingConfig: { thinkingLevel: 'minimal' },
         },
       }),
     });

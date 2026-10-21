@@ -105,4 +105,8 @@ export type Preferences = {
   servings?: ServingsOption;
   /** 보유 재료가 하나도 없는 레시피는 빼고 추천 */
   preferOwned: boolean;
+  /** 곧 상하는 재료를 쓰는 레시피를 위로 올린다. 없으면 켠 것으로 본다. */
+  soonFirst?: boolean;
+  /** 못 먹거나 싫은 재료. 이 재료가 들어간 레시피는 뺀다. */
+  excluded?: string[];
 };

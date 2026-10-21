@@ -29,7 +29,7 @@ export default function ScanCheckScreen() {
 
   const done = () => {
     used.forEach((p) => removeIngredient(p.id));
-    router.replace('/preferences');
+    router.dismissTo('/recipes');
   };
 
   return (
@@ -77,7 +77,7 @@ export default function ScanCheckScreen() {
         </Text>
       </ScrollView>
       <BottomBar>
-        <PrimaryButton label="건너뛰기" variant="light" onPress={() => router.replace('/preferences')} />
+        <PrimaryButton label="건너뛰기" variant="light" onPress={() => router.dismissTo('/recipes')} />
         <PrimaryButton label={used.length > 0 ? `${used.length}개 빼고 완료` : '완료'} onPress={done} />
       </BottomBar>
     </View>

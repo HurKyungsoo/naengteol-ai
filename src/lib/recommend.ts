@@ -1,3 +1,4 @@
+import { expiringItems } from '@/lib/expiry';
 import { hasIngredient, isMainIngredient, normalizeIngredient, substitutesFor } from '@/lib/ingredients';
 import type { Cuisine, Diet, PantryItem, Preferences, Recipe, RecipeIngredient } from '@/types';
 
@@ -17,6 +18,8 @@ export type RecipeMatch = {
   missing: MissingIngredient[];
   /** 핵심 재료 중 보유(대체 포함) 비율, 0~1 */
   coverage: number;
+  /** 이 레시피가 쓰는 곧 상하는 냉장고 재료 (recommendRecipes에서 채운다) */
+  soon: string[];
 };
 
 const QUICK_MINUTES = 15;
@@ -72,16 +75,58 @@ export function matchRecipe(recipe: Recipe, owned: Set<string>): RecipeMatch {
   // 대체 재료로 채운 경우는 절반만 인정한다.
   const coverage = core === 0 ? 0 : (have.length + substituted * 0.5) / core;
 
-  return { recipe, have, missing, coverage };
+  return { recipe, have, missing, coverage, soon: [] };
 }
 
-function matchesPreferences(recipe: Recipe, prefs: Preferences): boolean {
+/** 빼고 싶은 재료가 하나라도 들어가면 true. 양념·선택 재료도 본다 (못 먹는 재료일 수 있어서). */
+export function usesExcluded(recipe: Recipe, excluded: string[] | undefined): boolean {
+  if (!excluded?.length) return false;
+  const keys = excluded.map((e) => new Set([normalizeIngredient(e)]));
+  return recipe.ingredients.some((i) => keys.some((k) => hasIngredient(k, i.name)));
+}
+
+/** 식단·시간·난이도·인분·빼고 싶은 재료 조건 (냉장고 재료와 상관없는 것들) */
+export function matchesPreferences(recipe: Recipe, prefs: Preferences): boolean {
   if (prefs.diet && !matchesDiet(recipe, prefs.diet)) return false;
   if (prefs.maxMinutes && recipe.minutes > prefs.maxMinutes) return false;
   if (prefs.difficulty && recipe.difficulty !== prefs.difficulty) return false;
   if (prefs.servings === '1~2인' && recipe.servings > 2) return false;
   if (prefs.servings === '3인 이상' && recipe.servings < 3) return false;
+  if (usesExcluded(recipe, prefs.excluded)) return false;
   return true;
+}
+
+/**
+ * 냉장고 재료 기준으로 레시피를 한 번만 나눠 둔다. 조건 화면에서 칩을 누를 때마다
+ * 전체 추천을 다시 돌리지 않고 개수만 빠르게 셀 수 있게 한다.
+ */
+export function pantryCoverage(recipes: Recipe[], pantry: PantryItem[]) {
+  const owned = pantryNameSet(pantry);
+  const usable = new Set<string>();
+  const ready = new Set<string>();
+  for (const recipe of recipes) {
+    const m = matchRecipe(recipe, owned);
+    if (m.have.length > 0) usable.add(recipe.id);
+    if (m.have.length > 0 && m.missing.length === 0) ready.add(recipe.id);
+  }
+  return { usable, ready };
+}
+
+/** 조건에 맞는 레시피 수와 그중 바로 만들 수 있는 수 */
+export function countRecipes(
+  recipes: Recipe[],
+  prefs: Preferences,
+  coverage: ReturnType<typeof pantryCoverage>,
+): { total: number; ready: number } {
+  let total = 0;
+  let ready = 0;
+  for (const r of recipes) {
+    if (!matchesPreferences(r, prefs)) continue;
+    if (prefs.preferOwned && !coverage.usable.has(r.id)) continue;
+    total += 1;
+    if (coverage.ready.has(r.id)) ready += 1;
+  }
+  return { total, ready };
 }
 
 /**
@@ -99,10 +144,13 @@ export function matchesUsing(matches: RecipeMatch[], items: PantryItem[]): Recip
     .map(({ m }) => m);
 }
 
+/** 곧 상하는 재료를 쓰는 레시피에 더해 주는 점수. 재료 한두 개 더 부족해도 위로 올라올 만큼. */
+const SOON_BONUS = 0.25;
+
 /**
  * 보유 재료와 조건으로 레시피를 추천한다.
  * preferOwned면 핵심 재료를 하나도 갖고 있지 않은 레시피는 뺀다.
- * 보유 비율이 높고 조리 시간이 짧은 순으로 정렬한다.
+ * 보유 비율이 높고 조리 시간이 짧은 순으로 정렬하고, soonFirst면 곧 상하는 재료를 쓰는 레시피를 올린다.
  */
 export function recommendRecipes(
   recipes: Recipe[],
@@ -110,10 +158,17 @@ export function recommendRecipes(
   prefs: Preferences = { preferOwned: true },
 ): RecipeMatch[] {
   const owned = pantryNameSet(pantry);
+  const soon = expiringItems(pantry).map((p) => ({ name: p.name, key: new Set([normalizeIngredient(p.name)]) }));
+  const boost = prefs.soonFirst !== false;
+  const score = (m: RecipeMatch) => m.coverage + (boost && m.soon.length > 0 ? SOON_BONUS : 0);
 
   return recipes
     .filter((r) => matchesPreferences(r, prefs))
-    .map((r) => matchRecipe(r, owned))
+    .map((r) => {
+      const m = matchRecipe(r, owned);
+      m.soon = soon.filter((s) => m.have.some((i) => hasIngredient(s.key, i.name))).map((s) => s.name);
+      return m;
+    })
     .filter((m) => !prefs.preferOwned || m.have.length > 0)
-    .sort((a, b) => b.coverage - a.coverage || a.recipe.minutes - b.recipe.minutes);
+    .sort((a, b) => score(b) - score(a) || a.recipe.minutes - b.recipe.minutes);
 }

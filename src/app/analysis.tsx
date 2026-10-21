@@ -24,6 +24,9 @@ const BOUGHT_OPTIONS: { label: string; value: Bought }[] = [
   { label: '잘 모르겠어요', value: 'unknown' },
 ];
 
+/** 이만큼 지나도 분석 중이면 기다려 달라는 안내를 보여 준다 */
+const SLOW_MS = 10_000;
+
 /** 사진을 여러 장 찍었을 때만 안 보인 재료를 "다 썼어요?"로 묻는다. 한 장은 냉장고 일부만 보여서. */
 const CHECK_MIN_PHOTOS = 2;
 
@@ -45,6 +48,16 @@ export default function AnalysisScreen() {
   const perishable = [...checked].filter((name) => isPerishable(name) && !hasIngredient(owned, name));
 
   const [attempt, setAttempt] = useState(0);
+  // 오래 걸리면 멈춘 것처럼 보이지 않게 안내 문구를 바꾼다.
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    if (status !== 'loading') return;
+    const timer = setTimeout(() => setSlow(true), SLOW_MS);
+    return () => {
+      clearTimeout(timer);
+      setSlow(false);
+    };
+  }, [status, attempt]);
 
   useEffect(() => {
     if (photos.length === 0) return;
@@ -107,7 +120,9 @@ export default function AnalysisScreen() {
     const missing = photos.length >= CHECK_MIN_PHOTOS ? missingFromScan(pantry, items.map((i) => i.name)) : [];
     checked.forEach((name) => addIngredient(name, undefined, bought));
     setMissingIds(missing.map((p) => p.id));
-    router.replace(missing.length > 0 ? '/scan-check' : '/preferences');
+    // 재료를 넣었으면 바로 추천 레시피로 간다. 조건은 레시피 탭 위의 칩으로 바꾼다.
+    if (missing.length > 0) router.replace('/scan-check');
+    else router.dismissTo('/recipes');
   };
 
   if (photos.length === 0) {
@@ -142,6 +157,7 @@ export default function AnalysisScreen() {
             <Text style={styles.loadingText}>
               {photos.length > 1 ? `사진 ${photos.length}장에서 재료를 찾고 있어요…` : '사진에서 재료를 찾고 있어요…'}
             </Text>
+            {slow && <Text style={styles.slowText}>반찬통까지 꼼꼼히 보느라 조금 걸려요. 거의 다 됐어요.</Text>}
           </View>
         )}
 
@@ -396,6 +412,11 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 11,
     fontWeight: '700',
+  },
+  slowText: {
+    fontSize: 12,
+    color: colors.textMuted,
+    textAlign: 'center',
   },
   failed: {
     fontSize: 12,
