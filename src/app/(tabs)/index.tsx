@@ -8,12 +8,12 @@ import { IngredientIcon } from '@/components/IngredientIcon';
 import { RecipeImage } from '@/components/RecipeImage';
 import { DotsIcon } from '@/components/ScreenHeader';
 import { hasIngredient } from '@/lib/ingredients';
-import { pantryNameSet, recommendRecipes } from '@/lib/recommend';
+import { formatMinutes, pantryNameSet, recommendRecipes } from '@/lib/recommend';
 import { formatDuration, useVideoIndex, videoThumbnail } from '@/lib/video';
 import { useAppState } from '@/state/AppState';
 import { useRecipes } from '@/state/RecipesProvider';
 import { colors, radius, spacing } from '@/theme';
-import { DIETS, type Diet, type Recipe } from '@/types';
+import { DIETS, type Diet, type PantryItem, type Recipe } from '@/types';
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
@@ -30,11 +30,11 @@ export default function HomeScreen() {
   const owned = useMemo(() => pantryNameSet(pantry), [pantry]);
 
   const recent = recentViewed.flatMap((id) => findRecipe(id) ?? []);
-  const suggested = useMemo(
-    () => recommendRecipes(recipes, pantry, { preferOwned: true }).map((m) => m.recipe),
-    [recipes, pantry],
-  );
-  const shelf: Recipe[] = recent.length > 0 ? recent : suggested.length > 0 ? suggested : recipes;
+  const matches = useMemo(() => recommendRecipes(recipes, pantry, { preferOwned: true }), [recipes, pantry]);
+  const suggested = useMemo(() => matches.map((m) => m.recipe), [matches]);
+  const readyCount = matches.filter((m) => m.missing.length === 0).length;
+  // 냉장고에 재료가 있으면 "바로 만들 수 있어요" 줄이 따로 나오므로, 아래 줄은 최근 본 레시피나 전체 레시피를 보여 준다.
+  const shelf: Recipe[] = recent.length > 0 ? recent : pantry.length === 0 && suggested.length > 0 ? suggested : recipes;
 
   // 영상이 있는 레시피: 내 재료로 만들 수 있는 것부터. 영상이 적을 때는 줄을 숨긴다.
   const videos = useVideoIndex();
@@ -119,28 +119,42 @@ export default function HomeScreen() {
         </Text>
       )}
 
-      {pantry.length > 0 && (
-        <Pressable style={styles.pantryLink} onPress={() => router.navigate('/pantry')}>
-          <Text style={styles.pantryLinkText} numberOfLines={1}>
-            {`내 냉장고 ${pantry.length}개 · ${pantry
-              .slice(0, 3)
-              .map((p) => p.name)
-              .join(', ')}${pantry.length > 3 ? ' …' : ''}`}
-          </Text>
-          <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
-        </Pressable>
-      )}
-      {pantry.length > 0 && (
-        <Pressable
-          style={({ pressed }) => [styles.recommend, pressed && styles.pressed]}
-          onPress={() => router.push('/preferences')}
-          accessibilityRole="button">
-          <Text style={styles.recommendText}>이 재료로 레시피 추천받기</Text>
-          <Ionicons name="arrow-forward" size={16} color={colors.onInk} />
-        </Pressable>
-      )}
+      {pantry.length > 0 && <PantrySummary pantry={pantry} readyCount={readyCount} />}
       {pantry.length < WELCOME_UNTIL && (
         <WelcomeCard count={pantry.length} owned={owned} onQuickAdd={(name) => addIngredient(name)} />
+      )}
+
+      {matches.length > 0 && (
+        <>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>{readyCount > 0 ? '바로 만들 수 있어요' : '내 재료로 만들어 봐요'}</Text>
+            <Pressable onPress={() => router.navigate('/recipes')} hitSlop={8} style={styles.more}>
+              <Text style={styles.moreText}>더보기</Text>
+              <Ionicons name="chevron-forward" size={13} color={colors.textMuted} />
+            </Pressable>
+          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.shelf}>
+            {matches.slice(0, 8).map(({ recipe: r, missing }) => (
+              <Pressable
+                key={r.id}
+                style={styles.matchItem}
+                onPress={() => router.push({ pathname: '/recipe/[id]', params: { id: r.id } })}>
+                <View>
+                  <RecipeImage recipe={r} width={140} height={112} radius={radius.lg - 4} />
+                  <Text style={[styles.badge, missing.length === 0 ? styles.badgeReady : styles.badgeMissing]}>
+                    {missing.length === 0 ? '바로 가능' : `${missing.length}개 부족`}
+                  </Text>
+                </View>
+                <Text style={styles.matchTitle} numberOfLines={1}>
+                  {r.title}
+                </Text>
+                <Text style={styles.matchMeta}>
+                  {formatMinutes(r)} · {r.difficulty}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+        </>
       )}
 
       <View style={styles.grid}>
@@ -154,7 +168,7 @@ export default function HomeScreen() {
 
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>
-          {recent.length > 0 ? '최근 본 레시피' : '이런 요리는 어때요?'}
+          {recent.length > 0 ? '최근 본 레시피' : pantry.length > 0 ? '다른 요리도 둘러보세요' : '이런 요리는 어때요?'}
         </Text>
         <Pressable onPress={() => router.navigate('/recipes')} hitSlop={8} style={styles.more}>
           <Text style={styles.moreText}>더보기</Text>
@@ -209,6 +223,39 @@ export default function HomeScreen() {
         </>
       )}
     </ScrollView>
+  );
+}
+
+/** 냉장고 현황 카드: 재료 아이콘 몇 개 + 개수 + 바로 만들 수 있는 요리 수. 누르면 재료 관리로 간다. */
+function PantrySummary({ pantry, readyCount }: { pantry: PantryItem[]; readyCount: number }) {
+  const shown = pantry.slice(0, 3);
+  const rest = pantry.length - shown.length;
+  return (
+    <Pressable
+      style={({ pressed }) => [styles.summary, pressed && styles.pressed]}
+      onPress={() => router.navigate('/pantry')}
+      accessibilityRole="button"
+      accessibilityLabel={`내 냉장고 ${pantry.length}개, 바로 가능한 요리 ${readyCount}개`}>
+      <View style={styles.summaryIcons}>
+        {shown.map((p, i) => (
+          <View key={p.id} style={[styles.summaryIcon, i > 0 && styles.summaryIconOverlap]}>
+            <IngredientIcon name={p.name} size={36} tile />
+          </View>
+        ))}
+        {rest > 0 && (
+          <View style={[styles.summaryIcon, styles.summaryIconOverlap, styles.summaryRest]}>
+            <Text style={styles.summaryRestText}>+{rest}</Text>
+          </View>
+        )}
+      </View>
+      <View style={styles.summaryText}>
+        <Text style={styles.summaryTitle}>내 냉장고 {pantry.length}개</Text>
+        <Text style={readyCount > 0 ? styles.summaryReady : styles.summarySub} numberOfLines={1}>
+          {readyCount > 0 ? `바로 가능한 요리 ${readyCount}개` : '재료를 더 넣으면 바로 만들 요리가 생겨요'}
+        </Text>
+      </View>
+      <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+    </Pressable>
   );
 }
 
@@ -330,12 +377,89 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  pantryLink: {
+  summary: {
+    marginTop: spacing.lg,
+    padding: spacing.lg,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
     flexDirection: 'row',
     alignItems: 'center',
+    gap: spacing.md,
+  },
+  summaryIcons: {
+    flexDirection: 'row',
+  },
+  summaryIcon: {
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: colors.surface,
+  },
+  summaryIconOverlap: {
+    marginLeft: -10,
+  },
+  summaryRest: {
+    width: 40,
+    height: 40,
+    backgroundColor: colors.surfaceMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  summaryRestText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  summaryText: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  summaryTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  summaryReady: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#1F7A47',
+  },
+  summarySub: {
+    fontSize: 12,
+    color: colors.textSoft,
+  },
+  matchItem: {
+    width: 140,
     gap: 4,
-    marginTop: spacing.md,
-    paddingHorizontal: spacing.xs,
+  },
+  badge: {
+    position: 'absolute',
+    left: 8,
+    top: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: radius.pill,
+    overflow: 'hidden',
+    backgroundColor: colors.surface,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  badgeReady: {
+    color: '#1F7A47',
+  },
+  badgeMissing: {
+    color: '#B8461A',
+  },
+  matchTitle: {
+    marginTop: 2,
+    fontSize: 14,
+    fontWeight: '500',
+    color: colors.text,
+  },
+  matchMeta: {
+    fontSize: 12,
+    color: colors.textSoft,
   },
   notice: {
     marginTop: spacing.sm,
@@ -343,21 +467,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: '#1F7A47',
-  },
-  recommend: {
-    marginTop: spacing.md,
-    height: 48,
-    borderRadius: radius.pill,
-    backgroundColor: colors.ink,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-  },
-  recommendText: {
-    color: colors.onInk,
-    fontSize: 15,
-    fontWeight: '700',
   },
   welcome: {
     marginTop: spacing.lg,
@@ -440,11 +549,6 @@ const styles = StyleSheet.create({
   quickChipTextAdded: {
     color: '#1F7A47',
     fontWeight: '700',
-  },
-  pantryLinkText: {
-    flexShrink: 1,
-    fontSize: 13,
-    color: colors.textSoft,
   },
   grid: {
     flexDirection: 'row',
