@@ -24,7 +24,7 @@ export default function CameraScreen() {
     try {
       const photo = await cameraRef.current.takePictureAsync({ quality: 1 });
       if (!photo?.uri) throw new Error('사진 데이터가 없어요');
-      await preparePhoto(photo.uri, photo.width);
+      await preparePhoto(photo.uri, photo.width, photo.height);
       router.replace('/analysis');
     } catch (e) {
       setError(e instanceof Error ? e.message : '촬영에 실패했어요');

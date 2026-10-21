@@ -47,10 +47,17 @@ export default function AnalysisScreen() {
     analyzeFridgePhoto(photo.base64, photo.mimeType).then(
       (result) => {
         if (cancelled) return;
-        setItems(result.items);
+        // AI가 같은 재료를 두 번 돌려줄 때가 있어 이름으로 합친다 (확신도가 높은 쪽을 남긴다).
+        const byName = new Map<string, DetectedIngredient>();
+        for (const item of result.items) {
+          const prev = byName.get(item.name);
+          if (!prev || item.confidence > prev.confidence) byName.set(item.name, item);
+        }
+        const unique = [...byName.values()];
+        setItems(unique);
         setDemo(result.demo);
         // 확신도가 낮은 재료는 처음에 체크하지 않는다. 사용자가 직접 확인하도록.
-        setChecked(new Set(result.items.filter((i) => i.confidence >= 0.7).map((i) => i.name)));
+        setChecked(new Set(unique.filter((i) => i.confidence >= 0.7).map((i) => i.name)));
         setStatus('done');
       },
       (e: unknown) => {
