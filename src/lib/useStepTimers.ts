@@ -52,9 +52,12 @@ export function useStepTimers() {
   /** 남은 초 (끝났으면 0) */
   const remaining = (timer: StepTimer) => Math.max(0, Math.ceil((timer.endAt - now) / 1000));
 
+  /** 남은 비율 (1 → 0). 막대 길이에 쓴다 */
+  const fraction = (timer: StepTimer) => Math.max(0, Math.min(1, (timer.endAt - now) / (timer.total * 1000)));
+
   const find = (index: number) => timers.find((x) => x.index === index);
 
-  return { timers, start, stop, remaining, find };
+  return { timers, start, stop, remaining, fraction, find };
 }
 
 /** 265 → "4:25" */

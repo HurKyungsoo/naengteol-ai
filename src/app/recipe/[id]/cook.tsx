@@ -178,6 +178,8 @@ export default function CookScreen() {
                   onPress={() => timers.stop(t.index)}
                   accessibilityLabel={left === 0 ? `${t.index + 1}단계 타이머 끄기` : `${t.index + 1}단계 타이머 취소`}
                   style={[styles.timerPill, left === 0 && styles.timerPillDone]}>
+                  {/* 남은 시간만큼 채운 막대가 오른쪽에서부터 줄어든다 */}
+                  {left > 0 && <View style={[styles.timerFill, { width: `${timers.fraction(t) * 100}%` }]} />}
                   <Ionicons name={left === 0 ? 'alarm' : 'timer-outline'} size={16} color={colors.onInk} />
                   <Text style={styles.timerPillText}>
                     {left === 0 ? `${t.index + 1}단계 ${formatSeconds(t.total)} 끝났어요` : `${t.index + 1}단계 · ${formatSeconds(left)}`}
@@ -441,10 +443,18 @@ const styles = StyleSheet.create({
     height: 44,
     paddingHorizontal: spacing.lg,
     borderRadius: radius.pill,
-    backgroundColor: colors.accent,
+    overflow: 'hidden',
+    backgroundColor: '#B94A17',
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
+  },
+  timerFill: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    backgroundColor: colors.accent,
   },
   timerPillDone: {
     backgroundColor: colors.success,
