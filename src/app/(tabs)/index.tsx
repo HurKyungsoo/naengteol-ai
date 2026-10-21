@@ -69,7 +69,7 @@ export default function HomeScreen() {
           hitSlop={10}
           accessibilityRole="button"
           accessibilityLabel="즐겨찾기">
-          <Ionicons name="refresh" size={21} color={colors.text} />
+          <Ionicons name="heart-outline" size={22} color={colors.text} />
         </Pressable>
       </View>
 
