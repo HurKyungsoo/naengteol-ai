@@ -31,8 +31,9 @@ npx expo-doctor
 | 재료 관리 (탭) — 보유 재료 / 사용 기록 | `src/app/(tabs)/pantry.tsx` |
 | 마이페이지 (탭) | `src/app/(tabs)/my.tsx` |
 | 재료 등록 — 직접 입력 / 사진 / 최근 사용 | `src/app/ingredients/add.tsx` |
-| 사진 촬영 | `src/app/camera.tsx` |
-| AI 분석 결과 | `src/app/analysis.tsx` |
+| 사진 촬영 (칸별로 여러 장 / 한 장) | `src/app/camera.tsx` |
+| AI 분석 결과 (여러 장 합치기) | `src/app/analysis.tsx` |
+| 냉장고 점검 (사진에 안 보인 재료 "다 썼어요?") | `src/app/scan-check.tsx` |
 | 식단 및 조건 선택 | `src/app/preferences.tsx` |
 | 레시피 상세 | `src/app/recipe/[id]/index.tsx` |
 | 조리 순서 (+ 완료 시 재료 정리) | `src/app/recipe/[id]/cook.tsx` |
@@ -50,6 +51,7 @@ src/lib/ingredients.ts 재료 이름 정규화·대체 재료 표 (실제 내용
 src/lib/icons.ts      재료 → 아이콘
 src/data/assets.ts    사진·아이콘 require 목록, 사진 출처
 src/lib/analyze.ts    사진 분석 클라이언트 (서버 미설정 시 데모 결과)
+src/lib/scan.ts       여러 장 분석 결과 합치기, 사진에 안 보인 냉장고 재료 찾기
 src/lib/guide.ts      AI 보충 설명 클라이언트
 src/lib/video.ts      참고 영상 목록·검색 클라이언트
 src/lib/substituteCheck.ts  요리별 대체 재료 AI 확인 클라이언트

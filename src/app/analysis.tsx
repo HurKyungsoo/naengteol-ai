@@ -6,10 +6,12 @@ import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, Text
 import { IngredientIcon } from '@/components/IngredientIcon';
 import { BottomBar, PrimaryButton } from '@/components/PrimaryButton';
 import { ScreenHeader } from '@/components/ScreenHeader';
-import { analyzeFridgePhoto, type DetectedIngredient } from '@/lib/analyze';
+import { analyzeFridgePhoto } from '@/lib/analyze';
 import { BOUGHT_PRESETS, isPerishable } from '@/lib/expiry';
+import { FREQUENT_INGREDIENTS } from '@/lib/ingredientInput';
 import { hasIngredient, normalizeIngredient } from '@/lib/ingredients';
-import { getCapturedPhoto } from '@/lib/photoSession';
+import { getCapturedPhotos, setMissingIds } from '@/lib/photoSession';
+import { mergeScans, missingFromScan, type MergedIngredient } from '@/lib/scan';
 import { useAppState } from '@/state/AppState';
 import { colors, radius, spacing } from '@/theme';
 import type { Bought } from '@/types';
@@ -22,13 +24,18 @@ const BOUGHT_OPTIONS: { label: string; value: Bought }[] = [
   { label: '잘 모르겠어요', value: 'unknown' },
 ];
 
+/** 사진을 여러 장 찍었을 때만 안 보인 재료를 "다 썼어요?"로 묻는다. 한 장은 냉장고 일부만 보여서. */
+const CHECK_MIN_PHOTOS = 2;
+
 export default function AnalysisScreen() {
-  const photo = getCapturedPhoto();
+  const [photos] = useState(getCapturedPhotos);
   const { pantry, addIngredient } = useAppState();
   const [status, setStatus] = useState<Status>('loading');
   const [error, setError] = useState<string | null>(null);
   const [demo, setDemo] = useState(false);
-  const [items, setItems] = useState<DetectedIngredient[]>([]);
+  // 분석에 실패한 사진 수. 일부만 실패하면 나머지 결과는 보여 준다.
+  const [failed, setFailed] = useState(0);
+  const [items, setItems] = useState<MergedIngredient[]>([]);
   const [checked, setChecked] = useState<Set<string>>(new Set());
   const [extra, setExtra] = useState('');
   const [bought, setBought] = useState<Bought>('unknown');
@@ -40,34 +47,30 @@ export default function AnalysisScreen() {
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
-    if (!photo) return;
+    if (photos.length === 0) return;
     let cancelled = false;
-    analyzeFridgePhoto(photo.base64, photo.mimeType).then(
-      (result) => {
-        if (cancelled) return;
-        // AI가 같은 재료를 두 번 돌려줄 때가 있어 이름으로 합친다 (확신도가 높은 쪽을 남긴다).
-        const byName = new Map<string, DetectedIngredient>();
-        for (const item of result.items) {
-          const prev = byName.get(item.name);
-          if (!prev || item.confidence > prev.confidence) byName.set(item.name, item);
-        }
-        const unique = [...byName.values()];
-        setItems(unique);
-        setDemo(result.demo);
-        // 확신도가 낮은 재료는 처음에 체크하지 않는다. 사용자가 직접 확인하도록.
-        setChecked(new Set(unique.filter((i) => i.confidence >= 0.7).map((i) => i.name)));
-        setStatus('done');
-      },
-      (e: unknown) => {
-        if (cancelled) return;
-        setError(e instanceof Error ? e.message : '분석에 실패했어요');
+    // 사진마다 따로 분석하고 이름으로 합친다.
+    Promise.allSettled(photos.map((p) => analyzeFridgePhoto(p.base64, p.mimeType))).then((settled) => {
+      if (cancelled) return;
+      const ok = settled.flatMap((s, i) => (s.status === 'fulfilled' ? [{ label: photos[i].label, result: s.value }] : []));
+      if (ok.length === 0) {
+        const reason = settled.find((s) => s.status === 'rejected')?.reason;
+        setError(reason instanceof Error ? reason.message : '분석에 실패했어요');
         setStatus('error');
-      },
-    );
+        return;
+      }
+      const merged = mergeScans(ok.map(({ label, result }) => ({ label, items: result.items })));
+      setItems(merged);
+      setDemo(ok.some(({ result }) => result.demo));
+      setFailed(settled.length - ok.length);
+      // 확신도가 낮은 재료는 처음에 체크하지 않는다. 사용자가 직접 확인하도록.
+      setChecked(new Set(merged.filter((i) => i.confidence >= 0.7).map((i) => i.name)));
+      setStatus('done');
+    });
     return () => {
       cancelled = true;
     };
-  }, [photo, attempt]);
+  }, [photos, attempt]);
 
   const retry = () => {
     setStatus('loading');
@@ -82,20 +85,32 @@ export default function AnalysisScreen() {
       return next;
     });
 
+  const addItem = (name: string) => {
+    if (!items.some((i) => i.name === name)) setItems((prev) => [...prev, { name, confidence: 1, places: [], seen: 0 }]);
+    setChecked((prev) => new Set(prev).add(name));
+  };
+
   const addExtra = () => {
     const name = extra.trim();
     if (!name) return;
-    if (!items.some((i) => i.name === name)) setItems((prev) => [...prev, { name, confidence: 1 }]);
-    setChecked((prev) => new Set(prev).add(name));
+    addItem(name);
     setExtra('');
   };
 
+  // 사진에 없었지만 흔히 있는 재료. 빠진 걸 한 번에 넣을 수 있게 한다.
+  const quick = FREQUENT_INGREDIENTS.filter(
+    (n) => !hasIngredient(owned, n) && !items.some((i) => normalizeIngredient(i.name) === normalizeIngredient(n)),
+  ).slice(0, 6);
+
   const confirm = () => {
+    // 체크하지 않은 재료도 사진에 보였던 것이므로 "안 보인 재료"에서는 뺀다.
+    const missing = photos.length >= CHECK_MIN_PHOTOS ? missingFromScan(pantry, items.map((i) => i.name)) : [];
     checked.forEach((name) => addIngredient(name, undefined, bought));
-    router.replace('/preferences');
+    setMissingIds(missing.map((p) => p.id));
+    router.replace(missing.length > 0 ? '/scan-check' : '/preferences');
   };
 
-  if (!photo) {
+  if (photos.length === 0) {
     return (
       <View style={styles.screen}>
         <ScreenHeader title="AI 분석 결과" />
@@ -108,12 +123,25 @@ export default function AnalysisScreen() {
     <View style={styles.screen}>
       <ScreenHeader title="AI 분석 결과" />
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <Image source={{ uri: photo.uri }} style={styles.photo} resizeMode="cover" />
+        {photos.length === 1 ? (
+          <Image source={{ uri: photos[0].uri }} style={styles.photo} resizeMode="cover" />
+        ) : (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.strip}>
+            {photos.map((p, i) => (
+              <View key={i}>
+                <Image source={{ uri: p.uri }} style={styles.thumb} resizeMode="cover" />
+                {p.label && <Text style={styles.thumbLabel}>{p.label}</Text>}
+              </View>
+            ))}
+          </ScrollView>
+        )}
 
         {status === 'loading' && (
           <View style={styles.loading}>
             <ActivityIndicator color={colors.ink} />
-            <Text style={styles.loadingText}>사진에서 재료를 찾고 있어요…</Text>
+            <Text style={styles.loadingText}>
+              {photos.length > 1 ? `사진 ${photos.length}장에서 재료를 찾고 있어요…` : '사진에서 재료를 찾고 있어요…'}
+            </Text>
           </View>
         )}
 
@@ -140,6 +168,9 @@ export default function AnalysisScreen() {
               {items.length > 0 ? '다음과 같은 재료를 인식했어요' : '재료를 찾지 못했어요'}
             </Text>
             <Text style={styles.caption}>맞는 재료만 체크해 주세요.</Text>
+            {failed > 0 && (
+              <Text style={styles.failed}>사진 {failed}장은 분석하지 못했어요. 나머지 사진의 결과예요.</Text>
+            )}
 
             <View style={styles.list}>
               {items.map((item) => {
@@ -153,10 +184,15 @@ export default function AnalysisScreen() {
                     accessibilityRole="checkbox"
                     accessibilityState={{ checked: isChecked }}>
                     <IngredientIcon name={item.name} size={40} tile />
-                    <Text style={styles.rowName}>{item.name}</Text>
-                    {isOwned && <Text style={styles.ownedBadge}>보유 중</Text>}
+                    <View style={styles.rowText}>
+                      <View style={styles.rowTitle}>
+                        <Text style={styles.rowName}>{item.name}</Text>
+                        {isOwned && <Text style={styles.ownedBadge}>보유 중</Text>}
+                      </View>
+                      {item.places.length > 0 && <Text style={styles.places}>{item.places.join(' · ')}</Text>}
+                    </View>
                     <View style={styles.spacer} />
-                    <Text style={styles.confidence}>{Math.round(item.confidence * 100)}%</Text>
+                    {item.seen > 0 && <Text style={styles.confidence}>{Math.round(item.confidence * 100)}%</Text>}
                     <Ionicons
                       name={isChecked ? 'checkmark-circle' : 'ellipse-outline'}
                       size={24}
@@ -166,6 +202,25 @@ export default function AnalysisScreen() {
                 );
               })}
             </View>
+
+            {quick.length > 0 && (
+              <>
+                <Text style={styles.quickTitle}>빠진 게 있나요?</Text>
+                <View style={styles.quickChips}>
+                  {quick.map((name) => (
+                    <Pressable
+                      key={name}
+                      style={({ pressed }) => [styles.quickChip, pressed && styles.pressed]}
+                      onPress={() => addItem(name)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${name} 추가`}>
+                      <IngredientIcon name={name} size={16} />
+                      <Text style={styles.quickChipText}>{name}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </>
+            )}
 
             <View style={styles.extra}>
               <TextInput
@@ -303,9 +358,76 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
+  rowText: {
+    flexShrink: 1,
+    gap: 2,
+  },
+  rowTitle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
   rowName: {
     fontSize: 15,
     color: colors.text,
+  },
+  places: {
+    fontSize: 11,
+    color: colors.textMuted,
+  },
+  strip: {
+    gap: spacing.sm,
+  },
+  thumb: {
+    width: 120,
+    height: 120,
+    borderRadius: radius.md,
+    backgroundColor: colors.surfaceMuted,
+  },
+  thumbLabel: {
+    position: 'absolute',
+    left: 6,
+    bottom: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: radius.pill,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  failed: {
+    fontSize: 12,
+    color: '#B8461A',
+  },
+  quickTitle: {
+    marginTop: spacing.xs,
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  quickChips: {
+    marginTop: -spacing.xs,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  quickChip: {
+    height: 32,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surfaceMuted,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  quickChipText: {
+    fontSize: 13,
+    color: colors.text,
+  },
+  pressed: {
+    opacity: 0.7,
   },
   ownedBadge: {
     fontSize: 11,
