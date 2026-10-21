@@ -9,24 +9,11 @@ import { IngredientIcon } from '@/components/IngredientIcon';
 import { BottomBar, PrimaryButton } from '@/components/PrimaryButton';
 import { RecipeImage } from '@/components/RecipeImage';
 import { goBack, ScreenHeader } from '@/components/ScreenHeader';
-import type { IconName } from '@/data/assets';
 import { useRecipeGuide } from '@/lib/guide';
-import { ingredientIcon } from '@/lib/icons';
 import { normalizeIngredient, substitutesFor } from '@/lib/ingredients';
 import { useAppState } from '@/state/AppState';
 import { useRecipes } from '@/state/RecipesProvider';
 import { colors, radius, spacing } from '@/theme';
-import type { Recipe, RecipeStep } from '@/types';
-
-/** 단계 설명에 처음 나오는 재료의 아이콘을 단계 그림으로 쓴다. 없으면 요리 사진을 보여준다. */
-function stepIcon(recipe: Recipe, step: RecipeStep): IconName | undefined {
-  const found = recipe.ingredients
-    .filter((i) => !i.seasoning)
-    .map((i) => ({ i, at: step.text.indexOf(i.name) }))
-    .filter((x) => x.at >= 0)
-    .sort((a, b) => a.at - b.at)[0];
-  return found ? ingredientIcon(found.i.name) : undefined;
-}
 
 export default function CookScreen() {
   const insets = useSafeAreaInsets();
@@ -125,14 +112,10 @@ export default function CookScreen() {
                 {!last && <View style={styles.line} />}
               </View>
               <View style={[styles.card, isDone && styles.cardDone]}>
-                <RecipeImage
-                  recipe={recipe}
-                  imageUri={step.image}
-                  icon={step.image ? undefined : stepIcon(recipe, step)}
-                  width={72}
-                  height={72}
-                  radius={radius.md}
-                />
+                {/* 단계 사진이 있을 때만 보여 준다. 없을 때 완성 사진·아이콘을 반복하면 단계가 구분되지 않는다. */}
+                {step.image && (
+                  <RecipeImage recipe={recipe} imageUri={step.image} width={72} height={72} radius={radius.md} />
+                )}
                 <View style={styles.cardBody}>
                   {step.title && <Text style={styles.stepTitle}>{step.title}</Text>}
                   <Text style={styles.stepText}>{step.text}</Text>
