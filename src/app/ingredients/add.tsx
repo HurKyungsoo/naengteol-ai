@@ -5,9 +5,8 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-
 
 import { IngredientIcon } from '@/components/IngredientIcon';
 import { BottomBar, PrimaryButton } from '@/components/PrimaryButton';
-import { ScreenHeader } from '@/components/ScreenHeader';
+import { goBack, ScreenHeader } from '@/components/ScreenHeader';
 import { SegmentTabs } from '@/components/Tabs';
-import { KNOWN_INGREDIENTS } from '@/lib/icons';
 import { buildVocabulary, checkIngredient, splitIngredientInput } from '@/lib/ingredientInput';
 import { normalizeIngredient } from '@/lib/ingredients';
 import { pickPhotoFromLibrary } from '@/lib/pickPhoto';
@@ -15,38 +14,49 @@ import { useAppState } from '@/state/AppState';
 import { useRecipes } from '@/state/RecipesProvider';
 import { colors, radius, spacing } from '@/theme';
 
-type Mode = 'manual' | 'photo' | 'recent';
+type Mode = 'manual' | 'photo';
 
 const FREQUENT = ['계란', '밥', '김치', '두부', '양파', '대파', '감자', '토마토', '돼지고기', '닭가슴살', '참치캔', '양배추'];
 
 export default function AddIngredientsScreen() {
-  const { pantry, cookLogs, addIngredient, removeIngredient, clearPantry } = useAppState();
-  const [mode, setMode] = useState<Mode>('manual');
-  const [text, setText] = useState('');
-  const [message, setMessage] = useState<string | null>(null);
-  const [confirmClear, setConfirmClear] = useState(false);
-  // 홈의 입력창을 눌러 들어오면 (focus=1) 바로 입력할 수 있게 키보드를 띄운다.
-  const { focus } = useLocalSearchParams<{ focus?: string }>();
-  // 모르는 재료라 넣지 않은 이름. 비슷한 재료를 고르거나 그래도 넣을 수 있다.
-  const [unknown, setUnknown] = useState<{ name: string; suggestions: string[]; invalid: boolean }[]>([]);
+  const params = useLocalSearchParams<{ focus?: string; tab?: string }>();
+  const { pantry, cookLogs, addIngredient, removeIngredient } = useAppState();
   const { recipes } = useRecipes();
   const vocabulary = useMemo(() => buildVocabulary(recipes), [recipes]);
+  const [mode, setMode] = useState<Mode>(params.tab === 'photo' ? 'photo' : 'manual');
+  const [text, setText] = useState('');
+  const [message, setMessage] = useState<string | null>(null);
+  // 모르는 재료라 넣지 않은 이름. 비슷한 재료를 고르거나 그래도 넣을 수 있다.
+  const [unknown, setUnknown] = useState<{ name: string; suggestions: string[]; invalid: boolean }[]>([]);
+  // 이 화면에서 넣은 재료. 냉장고 전체는 냉장고 탭에서 본다.
+  const [justAdded, setJustAdded] = useState<string[]>([]);
 
   const owned = useMemo(() => new Set(pantry.map((p) => normalizeIngredient(p.name))), [pantry]);
+  const isOwned = (n: string) => owned.has(normalizeIngredient(n));
 
-  // "계란, 두부, 양" 처럼 여러 개를 입력하는 중이면 마지막 단어로 자동완성한다.
+  // "계란, 두부, 양" 처럼 여러 개를 입력하는 중이면 마지막 단어로 비슷한 재료를 찾는다.
   const tokens = text.split(/[,，]/);
   const query = normalizeIngredient(tokens[tokens.length - 1]?.trim() ?? '');
+  // 아는 재료는 1,500개 정도라 매번 걸러도 충분히 빠르다.
   const suggestions = query
-    ? KNOWN_INGREDIENTS.filter((n) => n.includes(query) && !owned.has(normalizeIngredient(n))).slice(0, 6)
+    ? [...vocabulary]
+        .filter((n) => n.includes(query) && !owned.has(n))
+        .sort((a, b) => Number(!a.startsWith(query)) - Number(!b.startsWith(query)) || a.length - b.length)
+        .slice(0, 8)
     : [];
 
-  // 요리하면서 다 쓴 재료 중 지금 냉장고에 없는 것
-  const recentlyUsed = [...new Set(cookLogs.flatMap((l) => l.usedIngredients))].filter(
-    (n) => !owned.has(normalizeIngredient(n)),
-  );
+  // 요리하며 다 쓴 재료 중 지금 냉장고에 없는 것
+  const usedUp = [...new Set(cookLogs.flatMap((l) => l.usedIngredients))].filter((n) => !isOwned(n));
+  // 다시 넣기 칩에 이미 있는 재료는 자주 쓰는 재료에서 뺀다.
+  const frequent = FREQUENT.filter((n) => !isOwned(n) && !usedUp.includes(n));
 
-  /** 쉼표로 구분한 재료를 한 번에 추가한다. 모르는 이름은 넣지 않고 비슷한 재료를 제안한다. */
+  const put = (name: string): boolean => {
+    const ok = addIngredient(name);
+    if (ok) setJustAdded((list) => [...list, name]);
+    return ok;
+  };
+
+  /** 쉼표로 구분한 재료를 한 번에 넣는다. 모르는 이름은 넣지 않고 비슷한 재료를 제안한다. */
   const addAll = (input: string) => {
     const names = splitIngredientInput(input);
     if (names.length === 0) return;
@@ -56,26 +66,27 @@ export default function AddIngredientsScreen() {
         check.known ? [] : [{ name, suggestions: check.suggestions, invalid: check.invalid }],
       ),
     );
-    const duplicates = checks.filter((c) => c.check.known && !addIngredient(c.name)).map((c) => c.name);
-    setMessage(duplicates.length > 0 ? `${duplicates.join(', ')}은(는) 이미 있어요` : null);
+    const duplicates = checks.filter((c) => c.check.known && !put(c.name)).map((c) => c.name);
+    setMessage(duplicates.length > 0 ? `${duplicates.join(', ')}은(는) 이미 냉장고에 있어요` : null);
     setText('');
   };
 
-  const resolveUnknown = (name: string, pick?: string) => {
-    if (pick) setMessage(addIngredient(pick) ? null : `'${pick}'은(는) 이미 있어요`);
-    setUnknown((list) => list.filter((u) => u.name !== name));
-  };
-
-  const addSuggestion = (name: string) => {
-    addIngredient(name);
-    setMessage(null);
-    // 입력 중이던 마지막 단어만 자동완성으로 바꾸고, 앞서 쓴 재료는 남겨 둔다.
+  const pickSuggestion = (name: string) => {
+    setMessage(put(name) ? null : `'${name}'은(는) 이미 냉장고에 있어요`);
+    // 입력 중이던 마지막 단어만 바꾸고, 앞서 쓴 재료는 남겨 둔다.
     const before = tokens.slice(0, -1).map((s) => s.trim()).filter(Boolean);
     setText(before.join(', ') + (before.length > 0 ? ', ' : ''));
   };
 
-  const add = (name: string) => {
-    setMessage(addIngredient(name) ? null : `'${name}'은(는) 이미 있어요`);
+  const resolveUnknown = (name: string, pick?: string) => {
+    if (pick) setMessage(put(pick) ? null : `'${pick}'은(는) 이미 냉장고에 있어요`);
+    setUnknown((list) => list.filter((u) => u.name !== name));
+  };
+
+  const takeBack = (name: string) => {
+    const item = pantry.find((p) => normalizeIngredient(p.name) === normalizeIngredient(name));
+    if (item) removeIngredient(item.id);
+    setJustAdded((list) => list.filter((n) => n !== name));
   };
 
   const fromLibrary = async () => {
@@ -84,13 +95,12 @@ export default function AddIngredientsScreen() {
 
   return (
     <View style={styles.screen}>
-      <ScreenHeader title="재료 등록" />
+      <ScreenHeader title="재료 넣기" />
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <SegmentTabs
           options={[
             { value: 'manual', label: '직접 입력' },
-            { value: 'photo', label: '사진으로 등록' },
-            { value: 'recent', label: '최근 사용' },
+            { value: 'photo', label: '사진으로' },
           ]}
           value={mode}
           onChange={setMode}
@@ -99,35 +109,26 @@ export default function AddIngredientsScreen() {
         {mode === 'manual' && (
           <View style={styles.block}>
             <View style={styles.search}>
-              <Ionicons name="search" size={18} color={colors.textMuted} />
+              <Ionicons name="search" size={18} color={colors.textSoft} />
               <TextInput
                 value={text}
                 onChangeText={(t) => {
                   setText(t);
                   setMessage(null);
                 }}
-                placeholder="재료명 입력 (여러 개는 쉼표로 구분)"
-                placeholderTextColor={colors.textMuted}
+                placeholder="재료 이름 (여러 개는 쉼표로)"
+                placeholderTextColor={colors.textSoft}
                 style={styles.searchInput}
                 returnKeyType="done"
                 onSubmitEditing={() => addAll(text)}
                 submitBehavior="submit"
-                autoFocus={focus === '1'}
+                autoFocus={params.focus === '1'}
               />
-              <Pressable onPress={() => addAll(text)} hitSlop={8} accessibilityLabel="재료 추가">
-                <Ionicons name="add" size={24} color={colors.text} />
+              <Pressable onPress={() => addAll(text)} style={styles.searchButton} accessibilityLabel="넣기">
+                <Ionicons name="add" size={20} color={colors.onInk} />
               </Pressable>
             </View>
-            {suggestions.length > 0 && (
-              <View style={styles.chips}>
-                {suggestions.map((s) => (
-                  <Pressable key={s} style={styles.suggestion} onPress={() => addSuggestion(s)}>
-                    <IngredientIcon name={s} size={18} />
-                    <Text style={styles.suggestionText}>{s}</Text>
-                  </Pressable>
-                ))}
-              </View>
-            )}
+
             {message && <Text style={styles.message}>{message}</Text>}
             {unknown.map((u) => (
               <View key={u.name} style={styles.unknown}>
@@ -149,18 +150,10 @@ export default function AddIngredientsScreen() {
                 {!u.invalid && (
                   <View style={styles.chips}>
                     {u.suggestions.map((s) => (
-                      <Pressable
-                        key={s}
-                        style={styles.suggestion}
-                        onPress={() => resolveUnknown(u.name, s)}
-                        accessibilityRole="button"
-                        accessibilityLabel={`${s} 넣기`}>
-                        <IngredientIcon name={s} size={18} />
-                        <Text style={styles.suggestionText}>{s}</Text>
-                      </Pressable>
+                      <Chip key={s} name={s} onPress={() => resolveUnknown(u.name, s)} />
                     ))}
                     <Pressable
-                      style={[styles.suggestion, styles.unknownForce]}
+                      style={[styles.chip, styles.unknownForce]}
                       onPress={() => resolveUnknown(u.name, u.name)}
                       accessibilityRole="button">
                       <Text style={styles.unknownForceText}>{`그래도 '${u.name}' 넣기`}</Text>
@@ -169,6 +162,42 @@ export default function AddIngredientsScreen() {
                 )}
               </View>
             ))}
+
+            {query ? (
+              suggestions.length > 0 && (
+                <View style={styles.group}>
+                  <Text style={styles.caption}>비슷한 재료</Text>
+                  <View style={styles.chips}>
+                    {suggestions.map((s) => (
+                      <Chip key={s} name={s} onPress={() => pickSuggestion(s)} />
+                    ))}
+                  </View>
+                </View>
+              )
+            ) : (
+              <>
+                {usedUp.length > 0 && (
+                  <View style={styles.group}>
+                    <Text style={styles.caption}>요리하며 다 쓴 재료 · 다시 넣기</Text>
+                    <View style={styles.chips}>
+                      {usedUp.map((n) => (
+                        <Chip key={n} name={n} plus onPress={() => put(n)} />
+                      ))}
+                    </View>
+                  </View>
+                )}
+                {frequent.length > 0 && (
+                  <View style={styles.group}>
+                    <Text style={styles.caption}>자주 쓰는 재료</Text>
+                    <View style={styles.chips}>
+                      {frequent.map((n) => (
+                        <Chip key={n} name={n} plus onPress={() => put(n)} />
+                      ))}
+                    </View>
+                  </View>
+                )}
+              </>
+            )}
           </View>
         )}
 
@@ -176,66 +205,31 @@ export default function AddIngredientsScreen() {
           <View style={styles.photoOptions}>
             <Pressable style={styles.photoCard} onPress={() => router.push('/camera')}>
               <Ionicons name="camera-outline" size={28} color={colors.text} />
-              <Text style={styles.photoTitle}>냉장고 촬영하기</Text>
-              <Text style={styles.photoDesc}>AI가 사진 속 재료를 찾아줘요</Text>
+              <Text style={styles.photoTitle}>냉장고 찍기</Text>
+              <Text style={styles.photoDesc}>AI가 사진 속 재료를 찾아요</Text>
             </Pressable>
             <Pressable style={styles.photoCard} onPress={fromLibrary}>
               <Ionicons name="images-outline" size={28} color={colors.text} />
-              <Text style={styles.photoTitle}>앨범에서 선택</Text>
-              <Text style={styles.photoDesc}>찍어 둔 사진으로도 돼요</Text>
+              <Text style={styles.photoTitle}>앨범에서 고르기</Text>
+              <Text style={styles.photoDesc}>찍어 둔 사진도 돼요</Text>
             </Pressable>
           </View>
         )}
 
-        {mode === 'recent' && (
-          <View style={styles.block}>
-            <Text style={styles.caption}>{recentlyUsed.length > 0 ? '요리하며 다 쓴 재료' : '자주 쓰는 재료'}</Text>
-            <View style={styles.chips}>
-              {(recentlyUsed.length > 0 ? recentlyUsed : FREQUENT.filter((f) => !owned.has(normalizeIngredient(f)))).map(
-                (n) => (
-                  <Pressable key={n} style={styles.suggestion} onPress={() => add(n)}>
-                    <IngredientIcon name={n} size={18} />
-                    <Text style={styles.suggestionText}>{n}</Text>
-                    <Ionicons name="add" size={14} color={colors.textSoft} />
-                  </Pressable>
-                ),
-              )}
-            </View>
-          </View>
-        )}
-
-        <View style={styles.ownedHeader}>
-          <Text style={styles.sectionTitle}>보유 재료 {pantry.length}</Text>
-          {pantry.length > 0 && (
-            <Pressable
-              hitSlop={8}
-              onPress={() => {
-                if (confirmClear) {
-                  clearPantry();
-                  setConfirmClear(false);
-                } else setConfirmClear(true);
-              }}>
-              <Text style={[styles.clear, confirmClear && styles.clearConfirm]}>
-                {confirmClear ? '한 번 더 누르면 삭제' : '전체 삭제'}
-              </Text>
-            </Pressable>
-          )}
+        <View style={styles.justHeader}>
+          <Text style={styles.sectionTitle}>방금 넣은 재료 {justAdded.length}</Text>
+          <Text style={styles.caption}>냉장고 전체 {pantry.length}개</Text>
         </View>
-        {pantry.length === 0 ? (
-          <Text style={styles.empty}>아직 등록한 재료가 없어요.</Text>
+        {justAdded.length === 0 ? (
+          <Text style={styles.caption}>위에서 재료를 고르거나 입력해 보세요.</Text>
         ) : (
-          <View style={styles.ownedGrid}>
-            {pantry.map((p) => (
-              <View key={p.id} style={styles.ownedItem}>
-                <IngredientIcon name={p.name} size={24} />
-                <View style={styles.ownedText}>
-                  <Text style={styles.ownedName} numberOfLines={1}>
-                    {p.name}
-                  </Text>
-                  {p.amount && <Text style={styles.ownedAmount}>{p.amount}</Text>}
-                </View>
-                <Pressable onPress={() => removeIngredient(p.id)} hitSlop={8} accessibilityLabel={`${p.name} 삭제`}>
-                  <Ionicons name="close" size={14} color={colors.textMuted} />
+          <View style={styles.chips}>
+            {justAdded.map((n) => (
+              <View key={n} style={styles.justChip}>
+                <IngredientIcon name={n} size={22} />
+                <Text style={styles.chipText}>{n}</Text>
+                <Pressable onPress={() => takeBack(n)} hitSlop={8} accessibilityLabel={`${n} 빼기`}>
+                  <Ionicons name="close" size={15} color={colors.textSoft} />
                 </Pressable>
               </View>
             ))}
@@ -244,11 +238,25 @@ export default function AddIngredientsScreen() {
       </ScrollView>
       <BottomBar>
         <PrimaryButton
-          label={pantry.length > 0 ? '저장하고 추천받기' : '저장하기'}
-          onPress={() => (pantry.length > 0 ? router.push('/preferences') : router.back())}
+          label={justAdded.length > 0 ? `완료 · ${justAdded.length}개 넣었어요` : '완료'}
+          onPress={goBack}
         />
       </BottomBar>
     </View>
+  );
+}
+
+function Chip({ name, plus = false, onPress }: { name: string; plus?: boolean; onPress: () => void }) {
+  return (
+    <Pressable
+      style={({ pressed }) => [styles.chip, pressed && styles.pressed]}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${name} 넣기`}>
+      <IngredientIcon name={name} size={22} />
+      <Text style={styles.chipText}>{name}</Text>
+      {plus && <Ionicons name="add" size={14} color={colors.textSoft} />}
+    </Pressable>
   );
 }
 
@@ -259,18 +267,19 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: spacing.xl,
-    paddingBottom: spacing.xl,
+    paddingBottom: spacing.xxl,
     gap: spacing.lg,
   },
   block: {
-    gap: spacing.md,
+    gap: spacing.lg,
   },
   search: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    height: 48,
-    paddingHorizontal: spacing.lg,
+    height: 52,
+    paddingLeft: spacing.lg,
+    paddingRight: 6,
     borderRadius: radius.pill,
     backgroundColor: colors.surfaceMuted,
   },
@@ -280,24 +289,48 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: colors.text,
   },
+  searchButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.ink,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  message: {
+    fontSize: 13,
+    color: '#B8461A',
+  },
+  group: {
+    gap: spacing.sm,
+  },
+  caption: {
+    fontSize: 12,
+    color: colors.textSoft,
+  },
   chips: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.sm,
   },
-  suggestion: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    height: 34,
-    paddingHorizontal: spacing.md,
+  chip: {
+    height: 38,
+    paddingLeft: spacing.sm,
+    paddingRight: spacing.md,
     borderRadius: radius.pill,
     borderWidth: 1,
     borderColor: colors.border,
+    backgroundColor: colors.surface,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
-  suggestionText: {
+  chipText: {
     fontSize: 14,
     color: colors.text,
+  },
+  pressed: {
+    opacity: 0.6,
   },
   unknown: {
     padding: spacing.md,
@@ -319,32 +352,24 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   unknownForce: {
+    paddingLeft: spacing.md,
     backgroundColor: 'transparent',
-    borderWidth: 1,
     borderColor: '#E3B9A3',
   },
   unknownForceText: {
     fontSize: 12,
     color: '#8A3412',
   },
-  message: {
-    fontSize: 13,
-    color: colors.accent,
-  },
-  caption: {
-    fontSize: 13,
-    color: colors.textMuted,
-  },
   photoOptions: {
     flexDirection: 'row',
-    gap: spacing.sm,
+    gap: spacing.md,
   },
   photoCard: {
     flex: 1,
+    gap: 6,
     padding: spacing.lg,
     borderRadius: radius.lg,
     backgroundColor: colors.surfaceMuted,
-    gap: spacing.sm,
   },
   photoTitle: {
     marginTop: spacing.sm,
@@ -354,56 +379,28 @@ const styles = StyleSheet.create({
   },
   photoDesc: {
     fontSize: 12,
-    color: colors.textMuted,
+    lineHeight: 17,
+    color: colors.textSoft,
   },
-  ownedHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  justHeader: {
     marginTop: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   sectionTitle: {
     fontSize: 15,
     fontWeight: '700',
     color: colors.text,
   },
-  clear: {
-    fontSize: 13,
-    color: colors.textMuted,
-  },
-  clearConfirm: {
-    color: colors.heart,
-    fontWeight: '700',
-  },
-  empty: {
-    fontSize: 14,
-    color: colors.textMuted,
-  },
-  ownedGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
-  ownedItem: {
-    width: '31.5%',
+  justChip: {
+    height: 38,
+    paddingLeft: spacing.sm,
+    paddingRight: spacing.md,
+    borderRadius: radius.pill,
+    backgroundColor: colors.successSoft,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.sm,
-    borderRadius: radius.md,
-    backgroundColor: colors.surfaceMuted,
-  },
-  ownedText: {
-    flex: 1,
-    minWidth: 0,
-  },
-  ownedName: {
-    fontSize: 13,
-    color: colors.text,
-  },
-  ownedAmount: {
-    fontSize: 11,
-    color: colors.textMuted,
   },
 });
