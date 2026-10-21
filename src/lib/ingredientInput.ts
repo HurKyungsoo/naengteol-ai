@@ -2,6 +2,11 @@ import { KNOWN_INGREDIENTS } from '@/lib/icons';
 import { normalizeIngredient } from '@/lib/ingredients';
 import type { Recipe } from '@/types';
 
+/** 재료 넣기 화면과 사진 분석 결과에서 한 번에 넣을 수 있게 보여 주는 자주 쓰는 재료 */
+export const FREQUENT_INGREDIENTS = [
+  '계란', '밥', '김치', '두부', '양파', '대파', '감자', '토마토', '돼지고기', '닭가슴살', '참치캔', '양배추',
+];
+
 /**
  * 입력창의 재료 목록을 나눈다. "닭 가슴살"처럼 띄어 쓴 재료가 있어서 쉼표(와 줄바꿈)로만 나눈다.
  */

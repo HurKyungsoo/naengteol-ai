@@ -1,15 +1,22 @@
 import { Ionicons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions, type CameraType } from 'expo-camera';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useRef, useState } from 'react';
-import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { goBack } from '@/components/ScreenHeader';
-import { pickPhotoFromLibrary, preparePhoto } from '@/lib/pickPhoto';
+import { setCapturedPhotos, type CapturedPhoto } from '@/lib/photoSession';
+import { MAX_PHOTOS, pickPhotosFromLibrary, preparePhoto } from '@/lib/pickPhoto';
 import { colors, radius, spacing } from '@/theme';
 
+/** 칸별로 찍을 때 안내하는 순서. 다 찍은 뒤에도 MAX_PHOTOS까지 더 찍을 수 있다 (서랍 등). */
+const SHELF_STEPS = ['위 칸', '가운데 칸', '문 칸'];
+
 export default function CameraScreen() {
+  // single: 한 장 찍으면 바로 분석. 기본은 칸별로 여러 장.
+  const { mode } = useLocalSearchParams<{ mode?: 'single' }>();
+  const single = mode === 'single';
   const insets = useSafeAreaInsets();
   const cameraRef = useRef<CameraView>(null);
   const [permission, requestPermission] = useCameraPermissions();
@@ -17,24 +24,48 @@ export default function CameraScreen() {
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [shots, setShots] = useState<CapturedPhoto[]>([]);
+  // 안내 중인 칸. 건너뛰면 사진 없이 다음 칸으로 간다.
+  const [step, setStep] = useState(0);
+  const label = SHELF_STEPS[step];
+
+  const finish = (list: CapturedPhoto[]) => {
+    setCapturedPhotos(list);
+    router.replace('/analysis');
+  };
 
   const capture = async () => {
     if (!cameraRef.current || !ready || busy) return;
     setBusy(true);
+    setError(null);
     try {
       const photo = await cameraRef.current.takePictureAsync({ quality: 1 });
       if (!photo?.uri) throw new Error('사진 데이터가 없어요');
-      await preparePhoto(photo.uri, photo.width, photo.height);
-      router.replace('/analysis');
+      const prepared = await preparePhoto(photo.uri, photo.width, photo.height, single ? undefined : (label ?? '추가'));
+      const next = [...shots, prepared];
+      if (single || next.length >= MAX_PHOTOS) return finish(next);
+      setShots(next);
+      setStep((s) => s + 1);
     } catch (e) {
       setError(e instanceof Error ? e.message : '촬영에 실패했어요');
-      setBusy(false);
     }
+    setBusy(false);
+  };
+
+  const undo = () => {
+    setShots((list) => list.slice(0, -1));
+    setStep((s) => Math.max(0, s - 1));
   };
 
   const fromLibrary = async () => {
-    if (await pickPhotoFromLibrary()) router.replace('/analysis');
+    if (await pickPhotosFromLibrary()) router.replace('/analysis');
   };
+
+  const hint = single
+    ? '냉장고 안이 잘 보이게 찍어 주세요'
+    : label
+      ? `${label}을 가득 차게 찍어 주세요`
+      : '더 찍을 곳이 있으면 찍어 주세요 (서랍 등)';
 
   // 권한을 아직 받지 못했으면 촬영 화면 대신 안내 화면 전체를 보여 준다.
   if (permission && !permission.granted) {
@@ -81,14 +112,45 @@ export default function CameraScreen() {
         <Ionicons name="chevron-back" size={26} color={colors.onInk} />
       </Pressable>
       {permission?.granted && (
-        <Text style={[styles.hint, { top: insets.top + spacing.lg }]}>냉장고 안이 잘 보이게 찍어 주세요</Text>
+        <View style={[styles.hintBox, { top: insets.top + spacing.sm }]} pointerEvents="box-none">
+          <Text style={styles.hint}>{hint}</Text>
+          {!single && label && (
+            <Pressable onPress={() => setStep((s) => s + 1)} hitSlop={8} accessibilityRole="button">
+              <Text style={styles.skip}>이 칸 건너뛰기</Text>
+            </Pressable>
+          )}
+        </View>
       )}
       {error && <Text style={styles.error}>{error}</Text>}
 
+      {!single && permission?.granted && (
+        <View style={styles.steps}>
+          {shots.map((s, i) => (
+            <View key={i} style={[styles.stepItem, styles.stepDone]}>
+              <Image source={{ uri: s.uri }} style={styles.stepImage} />
+              <Text style={styles.stepCaption} numberOfLines={1}>
+                {s.label}
+              </Text>
+            </View>
+          ))}
+          {SHELF_STEPS.slice(step).map((s, i) => (
+            <View key={s} style={[styles.stepItem, i === 0 && styles.stepNow]}>
+              <Text style={[styles.stepLabel, i === 0 && styles.stepLabelNow]}>{s}</Text>
+            </View>
+          ))}
+        </View>
+      )}
+
       <View style={[styles.controls, { paddingBottom: insets.bottom + spacing.xl }]}>
-        <Pressable style={styles.sideButton} onPress={fromLibrary} accessibilityLabel="앨범에서 선택">
-          <Ionicons name="images-outline" size={24} color={colors.onInk} />
-        </Pressable>
+        {shots.length > 0 ? (
+          <Pressable style={styles.sideButton} onPress={undo} accessibilityLabel="마지막 사진 다시 찍기">
+            <Ionicons name="arrow-undo-outline" size={24} color={colors.onInk} />
+          </Pressable>
+        ) : (
+          <Pressable style={styles.sideButton} onPress={fromLibrary} accessibilityLabel="앨범에서 선택">
+            <Ionicons name="images-outline" size={24} color={colors.onInk} />
+          </Pressable>
+        )}
         <Pressable
           style={[styles.shutter, (!ready || busy) && styles.shutterDisabled]}
           onPress={capture}
@@ -96,12 +158,22 @@ export default function CameraScreen() {
           accessibilityLabel="촬영">
           {busy ? <ActivityIndicator color={colors.ink} /> : <View style={styles.shutterInner} />}
         </Pressable>
-        <Pressable
-          style={styles.sideButton}
-          onPress={() => setFacing((f) => (f === 'back' ? 'front' : 'back'))}
-          accessibilityLabel="카메라 전환">
-          <Ionicons name="camera-reverse-outline" size={26} color={colors.onInk} />
-        </Pressable>
+        {shots.length > 0 ? (
+          <Pressable
+            style={styles.doneButton}
+            onPress={() => finish(shots)}
+            disabled={busy}
+            accessibilityRole="button">
+            <Text style={styles.doneText}>다 찍었어요</Text>
+          </Pressable>
+        ) : (
+          <Pressable
+            style={styles.sideButton}
+            onPress={() => setFacing((f) => (f === 'back' ? 'front' : 'back'))}
+            accessibilityLabel="카메라 전환">
+            <Ionicons name="camera-reverse-outline" size={26} color={colors.onInk} />
+          </Pressable>
+        )}
       </View>
     </View>
   );
@@ -213,11 +285,86 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: spacing.lg,
   },
-  hint: {
+  hintBox: {
     position: 'absolute',
-    alignSelf: 'center',
-    color: 'rgba(255,255,255,0.85)',
+    left: 64,
+    right: 64,
+    alignItems: 'center',
+    gap: 6,
+  },
+  hint: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+    borderRadius: radius.pill,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    color: '#fff',
     fontSize: 13,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  skip: {
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: 12,
+    textDecorationLine: 'underline',
+  },
+  steps: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    paddingTop: spacing.md,
+    backgroundColor: '#000',
+  },
+  stepItem: {
+    width: 52,
+    height: 52,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#444',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  stepDone: {
+    borderColor: colors.success,
+  },
+  stepNow: {
+    borderColor: '#fff',
+  },
+  stepImage: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+  },
+  stepCaption: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    color: '#fff',
+    fontSize: 9,
+    textAlign: 'center',
+  },
+  stepLabel: {
+    color: '#888',
+    fontSize: 10,
+    textAlign: 'center',
+  },
+  stepLabelNow: {
+    color: '#fff',
+    fontWeight: '700',
+  },
+  doneButton: {
+    width: 52,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  doneText: {
+    color: '#9BE0B7',
+    fontSize: 13,
+    fontWeight: '700',
+    textAlign: 'center',
   },
   error: {
     position: 'absolute',

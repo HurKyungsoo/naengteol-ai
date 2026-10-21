@@ -7,16 +7,15 @@ import { IngredientIcon } from '@/components/IngredientIcon';
 import { BottomBar, PrimaryButton } from '@/components/PrimaryButton';
 import { goBack, ScreenHeader } from '@/components/ScreenHeader';
 import { SegmentTabs } from '@/components/Tabs';
-import { buildVocabulary, checkIngredient, splitIngredientInput } from '@/lib/ingredientInput';
+import { buildVocabulary, checkIngredient, FREQUENT_INGREDIENTS, splitIngredientInput } from '@/lib/ingredientInput';
 import { normalizeIngredient } from '@/lib/ingredients';
-import { pickPhotoFromLibrary } from '@/lib/pickPhoto';
+import { pickPhotosFromLibrary } from '@/lib/pickPhoto';
 import { useAppState } from '@/state/AppState';
 import { useRecipes } from '@/state/RecipesProvider';
 import { colors, radius, spacing } from '@/theme';
 
 type Mode = 'manual' | 'photo';
 
-const FREQUENT = ['계란', '밥', '김치', '두부', '양파', '대파', '감자', '토마토', '돼지고기', '닭가슴살', '참치캔', '양배추'];
 
 export default function AddIngredientsScreen() {
   const params = useLocalSearchParams<{ focus?: string; tab?: string }>();
@@ -48,7 +47,7 @@ export default function AddIngredientsScreen() {
   // 요리하며 다 쓴 재료 중 지금 냉장고에 없는 것
   const usedUp = [...new Set(cookLogs.flatMap((l) => l.usedIngredients))].filter((n) => !isOwned(n));
   // 다시 넣기 칩에 이미 있는 재료는 자주 쓰는 재료에서 뺀다.
-  const frequent = FREQUENT.filter((n) => !isOwned(n) && !usedUp.includes(n));
+  const frequent = FREQUENT_INGREDIENTS.filter((n) => !isOwned(n) && !usedUp.includes(n));
 
   const put = (name: string): boolean => {
     const ok = addIngredient(name);
@@ -90,7 +89,7 @@ export default function AddIngredientsScreen() {
   };
 
   const fromLibrary = async () => {
-    if (await pickPhotoFromLibrary()) router.push('/analysis');
+    if (await pickPhotosFromLibrary()) router.push('/analysis');
   };
 
   return (
@@ -203,16 +202,37 @@ export default function AddIngredientsScreen() {
 
         {mode === 'photo' && (
           <View style={styles.photoOptions}>
-            <Pressable style={styles.photoCard} onPress={() => router.push('/camera')}>
-              <Ionicons name="camera-outline" size={28} color={colors.text} />
-              <Text style={styles.photoTitle}>냉장고 찍기</Text>
-              <Text style={styles.photoDesc}>AI가 사진 속 재료를 찾아요</Text>
+            <Pressable
+              style={({ pressed }) => [styles.photoCard, styles.photoCardMain, pressed && styles.pressed]}
+              onPress={() => router.push('/camera')}
+              accessibilityRole="button">
+              <View style={styles.photoTitleRow}>
+                <Ionicons name="grid-outline" size={20} color={colors.onInk} />
+                <Text style={[styles.photoTitle, styles.photoTitleMain]}>칸별로 찍기</Text>
+                <Text style={styles.recommend}>추천</Text>
+              </View>
+              <Text style={[styles.photoDesc, styles.photoDescMain]}>
+                칸마다 가까이 찍으면 반찬통·소스병까지 더 잘 찾아요. 사진에 안 보인 재료는 다 썼는지 물어봐요.
+              </Text>
             </Pressable>
-            <Pressable style={styles.photoCard} onPress={fromLibrary}>
-              <Ionicons name="images-outline" size={28} color={colors.text} />
-              <Text style={styles.photoTitle}>앨범에서 고르기</Text>
-              <Text style={styles.photoDesc}>찍어 둔 사진도 돼요</Text>
-            </Pressable>
+            <View style={styles.photoRow}>
+              <Pressable
+                style={({ pressed }) => [styles.photoCard, styles.photoCardHalf, pressed && styles.pressed]}
+                onPress={() => router.push({ pathname: '/camera', params: { mode: 'single' } })}
+                accessibilityRole="button">
+                <Ionicons name="camera-outline" size={22} color={colors.text} />
+                <Text style={styles.photoTitle}>한 장으로 찍기</Text>
+                <Text style={styles.photoDesc}>빠르지만 가려진 재료는 놓칠 수 있어요</Text>
+              </Pressable>
+              <Pressable
+                style={({ pressed }) => [styles.photoCard, styles.photoCardHalf, pressed && styles.pressed]}
+                onPress={fromLibrary}
+                accessibilityRole="button">
+                <Ionicons name="images-outline" size={22} color={colors.text} />
+                <Text style={styles.photoTitle}>앨범에서 고르기</Text>
+                <Text style={styles.photoDesc}>찍어 둔 사진 여러 장도 돼요</Text>
+              </Pressable>
+            </View>
           </View>
         )}
 
@@ -361,26 +381,56 @@ const styles = StyleSheet.create({
     color: '#8A3412',
   },
   photoOptions: {
+    gap: spacing.md,
+  },
+  photoRow: {
     flexDirection: 'row',
     gap: spacing.md,
   },
   photoCard: {
-    flex: 1,
     gap: 6,
     padding: spacing.lg,
     borderRadius: radius.lg,
     backgroundColor: colors.surfaceMuted,
   },
+  photoCardMain: {
+    backgroundColor: colors.ink,
+  },
+  photoCardHalf: {
+    flex: 1,
+  },
+  photoTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   photoTitle: {
-    marginTop: spacing.sm,
+    marginTop: spacing.xs,
     fontSize: 15,
     fontWeight: '700',
     color: colors.text,
+  },
+  photoTitleMain: {
+    marginTop: 0,
+    color: colors.onInk,
+  },
+  recommend: {
+    paddingHorizontal: 7,
+    paddingVertical: 1,
+    borderRadius: radius.pill,
+    overflow: 'hidden',
+    backgroundColor: colors.success,
+    color: colors.onInk,
+    fontSize: 11,
+    fontWeight: '700',
   },
   photoDesc: {
     fontSize: 12,
     lineHeight: 17,
     color: colors.textSoft,
+  },
+  photoDescMain: {
+    color: '#CFCFCC',
   },
   justHeader: {
     marginTop: spacing.sm,
