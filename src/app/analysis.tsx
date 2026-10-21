@@ -7,12 +7,22 @@ import { IngredientIcon } from '@/components/IngredientIcon';
 import { BottomBar, PrimaryButton } from '@/components/PrimaryButton';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { analyzeFridgePhoto, type DetectedIngredient } from '@/lib/analyze';
+import { isPerishable } from '@/lib/expiry';
 import { hasIngredient, normalizeIngredient } from '@/lib/ingredients';
 import { getCapturedPhoto } from '@/lib/photoSession';
 import { useAppState } from '@/state/AppState';
 import { colors, radius, spacing } from '@/theme';
+import type { Bought } from '@/types';
 
 type Status = 'loading' | 'done' | 'error';
+
+// 냉장고 사진 속 재료는 언제 샀는지 알 수 없어서 한 번만 묻는다. 기본은 "모름".
+const BOUGHT_OPTIONS: { label: string; value: Bought }[] = [
+  { label: '오늘 샀어요', value: { daysAgo: 0 } },
+  { label: '2~3일 전', value: { daysAgo: 3 } },
+  { label: '일주일쯤 전', value: { daysAgo: 7 } },
+  { label: '잘 모르겠어요', value: 'unknown' },
+];
 
 export default function AnalysisScreen() {
   const photo = getCapturedPhoto();
@@ -23,8 +33,11 @@ export default function AnalysisScreen() {
   const [items, setItems] = useState<DetectedIngredient[]>([]);
   const [checked, setChecked] = useState<Set<string>>(new Set());
   const [extra, setExtra] = useState('');
+  const [bought, setBought] = useState<Bought>('unknown');
 
   const owned = new Set(pantry.map((p) => normalizeIngredient(p.name)));
+  // 기한을 챙길 재료가 있을 때만 "언제 샀어요?"를 묻는다. 이미 냉장고에 있는 재료는 새로 들어가지 않는다.
+  const perishable = [...checked].filter((name) => isPerishable(name) && !hasIngredient(owned, name));
 
   const [attempt, setAttempt] = useState(0);
 
@@ -73,7 +86,7 @@ export default function AnalysisScreen() {
   };
 
   const confirm = () => {
-    checked.forEach((name) => addIngredient(name));
+    checked.forEach((name) => addIngredient(name, undefined, bought));
     router.replace('/preferences');
   };
 
@@ -163,6 +176,33 @@ export default function AnalysisScreen() {
                 <Ionicons name="add" size={22} color={colors.text} />
               </Pressable>
             </View>
+
+            {perishable.length > 0 && (
+              <View style={styles.bought}>
+                <Text style={styles.boughtTitle}>언제 산 재료예요?</Text>
+                <Text style={styles.caption2}>
+                  {perishable.join(', ')}의 소비기한을 계산하는 데 써요. 냉장고에서 재료마다 바꿀 수 있어요.
+                </Text>
+                <View style={styles.boughtChips}>
+                  {BOUGHT_OPTIONS.map((o) => {
+                    const on = JSON.stringify(o.value) === JSON.stringify(bought);
+                    return (
+                      <Pressable
+                        key={o.label}
+                        style={[styles.boughtChip, on && styles.boughtChipOn]}
+                        onPress={() => setBought(o.value)}
+                        accessibilityRole="radio"
+                        accessibilityState={{ selected: on }}>
+                        <Text style={[styles.boughtChipText, on && styles.boughtChipTextOn]}>{o.label}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+                {bought === 'unknown' && (
+                  <Text style={styles.boughtHint}>모르면 보관 기간을 짧게 잡아 미리 알려 드려요.</Text>
+                )}
+              </View>
+            )}
           </>
         )}
       </ScrollView>
@@ -286,6 +326,53 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     borderRadius: radius.pill,
     backgroundColor: colors.surfaceMuted,
+  },
+  bought: {
+    marginTop: spacing.sm,
+    padding: spacing.lg,
+    gap: spacing.sm,
+    borderRadius: radius.lg,
+    backgroundColor: colors.surfaceMuted,
+  },
+  boughtTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  caption2: {
+    marginTop: -4,
+    fontSize: 12,
+    color: colors.textMuted,
+  },
+  boughtChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  boughtChip: {
+    height: 34,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    justifyContent: 'center',
+  },
+  boughtChipOn: {
+    backgroundColor: colors.ink,
+    borderColor: colors.ink,
+  },
+  boughtChipText: {
+    fontSize: 13,
+    color: colors.text,
+  },
+  boughtChipTextOn: {
+    color: colors.onInk,
+    fontWeight: '700',
+  },
+  boughtHint: {
+    fontSize: 12,
+    color: colors.textSoft,
   },
   extraInput: {
     flex: 1,

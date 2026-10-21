@@ -3,12 +3,14 @@ import { StatusBar } from 'expo-status-bar';
 import { View } from 'react-native';
 
 import { Intro } from '@/components/Intro';
+import { useExpiryNotifications } from '@/lib/useExpiryNotifications';
 import { AppStateProvider, useAppState } from '@/state/AppState';
 import { RecipesProvider } from '@/state/RecipesProvider';
 import { colors } from '@/theme';
 
 function AppShell() {
-  const { loaded } = useAppState();
+  const { loaded, pantry, profile } = useAppState();
+  useExpiryNotifications(pantry, profile.notifications, loaded);
   return (
     <View style={{ flex: 1 }}>
       <Stack

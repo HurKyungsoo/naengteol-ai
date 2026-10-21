@@ -53,6 +53,8 @@ src/lib/analyze.ts    사진 분석 클라이언트 (서버 미설정 시 데모
 src/lib/guide.ts      AI 보충 설명 클라이언트
 src/lib/video.ts      참고 영상 목록·검색 클라이언트
 src/lib/substituteCheck.ts  요리별 대체 재료 AI 확인 클라이언트
+src/lib/expiry.ts     소비기한 (재료별 기본 보관 기간, 2주 이하 재료만 관리, 산 날 모르면 짧게 추정)
+src/lib/useExpiryNotifications.ts  소비기한 알림 (기기 로컬 알림, 전날·당일 오후 5시, 웹 미지원)
 src/state/AppState.tsx 재료·즐겨찾기·조리 기록·조건·프로필 (기기에 저장)
 src/state/RecipesProvider.tsx 샘플 + 공공 레시피 (하루 한 번 새로 받음)
 

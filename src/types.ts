@@ -27,7 +27,16 @@ export type PantryItem = {
   /** 자유 입력 (예: "2개", "1/2개", "200g") */
   amount?: string;
   addedAt: number;
+  /** 산 날. 사진으로 한꺼번에 넣을 때는 넣은 날과 다를 수 있다. 없으면 addedAt. */
+  boughtAt?: number;
+  /** 산 날을 몰라서 소비기한을 짧게 추정한 재료 */
+  boughtUnknown?: boolean;
+  /** 직접 정한 소비기한 (그날 0시). 없으면 재료별 기본 보관 기간으로 계산한다 (lib/expiry). */
+  expiresAt?: number;
 };
+
+/** 재료를 넣을 때 고르는 "언제 샀어요?" — 며칠 전인지, 또는 모름 */
+export type Bought = { daysAgo: number } | 'unknown';
 
 export type RecipeIngredient = {
   name: string;

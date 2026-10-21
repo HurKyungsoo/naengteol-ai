@@ -1,11 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, type Href } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { useAppState } from '@/state/AppState';
-import { colors, radius, spacing } from '@/theme';
+import { colors, radius, spacing, switchColors } from '@/theme';
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
@@ -70,7 +70,21 @@ export default function MyScreen() {
         </View>
 
         <View style={styles.menu}>
-          {/* 알림 설정은 알림 기능을 만든 뒤에 다시 넣는다 (값만 저장되고 보내는 알림이 없었다) */}
+          <View style={styles.menuRow}>
+            <Ionicons name="notifications-outline" size={20} color={colors.text} />
+            <View style={styles.menuText}>
+              <Text style={styles.menuLabel}>소비기한 알림</Text>
+              <Text style={styles.menuSub}>
+                {Platform.OS === 'web' ? '앱에서만 받을 수 있어요' : '소비기한 전날과 당일 저녁 5시에 알려 드려요'}
+              </Text>
+            </View>
+            <Switch
+              value={profile.notifications}
+              onValueChange={(notifications) => updateProfile({ notifications })}
+              accessibilityLabel="소비기한 알림"
+              {...switchColors}
+            />
+          </View>
           {menu.map((m) => (
             <MenuRow key={m.label} {...m} />
           ))}
@@ -201,6 +215,14 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     color: colors.text,
+  },
+  menuText: {
+    flex: 1,
+    gap: 2,
+  },
+  menuSub: {
+    fontSize: 12,
+    color: colors.textMuted,
   },
   version: {
     marginTop: spacing.xl,

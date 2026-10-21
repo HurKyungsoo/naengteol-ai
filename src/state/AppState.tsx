@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { normalizeIngredient } from '@/lib/ingredients';
-import type { CookLog, PantryItem, Preferences } from '@/types';
+import type { Bought, CookLog, PantryItem, Preferences } from '@/types';
 
 // Supabase로 옮기기 전까지는 기기에만 저장한다.
 const STORAGE_KEY = 'naengteol/state/v1';
@@ -32,9 +32,11 @@ const EMPTY_STATE: PersistedState = {
 
 type AppStateValue = PersistedState & {
   loaded: boolean;
-  /** 이미 있는 재료면 false를 돌려준다. */
-  addIngredient: (name: string, amount?: string) => boolean;
+  /** 이미 있는 재료면 false를 돌려준다. bought를 안 주면 오늘 산 것으로 본다. */
+  addIngredient: (name: string, amount?: string, bought?: Bought) => boolean;
   updateIngredient: (id: string, name: string, amount?: string) => void;
+  /** undefined면 기본 보관 기간으로 되돌린다. */
+  setExpiry: (id: string, expiresAt: number | undefined) => void;
   removeIngredient: (id: string) => void;
   clearPantry: () => void;
   toggleFavorite: (recipeId: string) => void;
@@ -88,21 +90,19 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     () => ({
       ...state,
       loaded,
-      addIngredient: (name, amount) => {
+      addIngredient: (name, amount, bought) => {
         const trimmed = name.trim();
         if (!trimmed) return false;
         const key = normalizeIngredient(trimmed);
         if (state.pantry.some((p) => normalizeIngredient(p.name) === key)) return false;
+        const now = Date.now();
+        const item: PantryItem = { id: newId(), name: trimmed, amount: cleanAmount(amount), addedAt: now };
+        if (bought === 'unknown') item.boughtUnknown = true;
+        else if (bought && bought.daysAgo > 0) item.boughtAt = now - bought.daysAgo * 24 * 60 * 60 * 1000;
         setState((s) => {
           // 같은 렌더에서 여러 번 호출될 수 있으니 최신 상태로 한 번 더 확인한다.
           if (s.pantry.some((p) => normalizeIngredient(p.name) === key)) return s;
-          return {
-            ...s,
-            pantry: [
-              { id: newId(), name: trimmed, amount: cleanAmount(amount), addedAt: Date.now() },
-              ...s.pantry,
-            ],
-          };
+          return { ...s, pantry: [item, ...s.pantry] };
         });
         return true;
       },
@@ -114,6 +114,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           pantry: s.pantry.map((p) =>
             p.id === id ? { ...p, name: trimmed, amount: cleanAmount(amount) } : p,
           ),
+        }));
+      },
+      setExpiry: (id, expiresAt) => {
+        setState((s) => ({
+          ...s,
+          pantry: s.pantry.map((p) => (p.id === id ? { ...p, expiresAt } : p)),
         }));
       },
       removeIngredient: (id) => {

@@ -7,7 +7,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { IngredientIcon } from '@/components/IngredientIcon';
 import { RecipeImage } from '@/components/RecipeImage';
 import { hasIngredient } from '@/lib/ingredients';
-import { formatMinutes, pantryNameSet, recommendRecipes } from '@/lib/recommend';
+import { daysLeft, expiringItems, expiryPhrase } from '@/lib/expiry';
+import { formatMinutes, matchesUsing, pantryNameSet, recommendRecipes } from '@/lib/recommend';
 import { formatDuration, useVideoIndex, videoThumbnail } from '@/lib/video';
 import { useAppState } from '@/state/AppState';
 import { useRecipes } from '@/state/RecipesProvider';
@@ -24,7 +25,8 @@ export default function HomeScreen() {
   const matches = useMemo(() => recommendRecipes(recipes, pantry, { preferOwned: true }), [recipes, pantry]);
   const suggested = useMemo(() => matches.map((m) => m.recipe), [matches]);
   const readyCount = matches.filter((m) => m.missing.length === 0).length;
-  // 냉장고에 재료가 있으면 "바로 만들 수 있어요" 줄이 따로 나오므로, 아래 줄은 최근 본 레시피나 전체 레시피를 보여 준다.
+  const soon = useMemo(() => expiringItems(pantry), [pantry]);
+  const soonMatches = useMemo(() => matchesUsing(matches, soon).slice(0, 8), [matches, soon]);
   // 냉장고에 재료가 있으면 위에 "바로 만들 수 있어요" 줄이 나오므로, 아래 줄은 최근 본 레시피가 있을 때만 보여 준다.
   const showShelf = pantry.length === 0 || recent.length > 0;
   const shelf: Recipe[] = recent.length > 0 ? recent : recipes;
@@ -88,7 +90,40 @@ export default function HomeScreen() {
         </Pressable>
       </View>
 
-      {pantry.length > 0 && <PantrySummary pantry={pantry} readyCount={readyCount} />}
+      {pantry.length > 0 && <PantrySummary pantry={pantry} soon={soon} readyCount={readyCount} />}
+
+      {soonMatches.length > 0 && (
+        <>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>곧 상하는 재료부터 써요</Text>
+            <Pressable onPress={() => router.navigate('/pantry')} hitSlop={8} style={styles.more}>
+              <Text style={styles.moreText}>냉장고</Text>
+              <Ionicons name="chevron-forward" size={13} color={colors.textMuted} />
+            </Pressable>
+          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.shelf}>
+            {soonMatches.map(({ recipe: r, missing }) => (
+              <Pressable
+                key={r.id}
+                style={styles.matchItem}
+                onPress={() => router.push({ pathname: '/recipe/[id]', params: { id: r.id } })}>
+                <View>
+                  <RecipeImage recipe={r} width={140} height={112} radius={radius.lg - 4} />
+                  <Text style={[styles.badge, missing.length === 0 ? styles.badgeReady : styles.badgeMissing]}>
+                    {missing.length === 0 ? '바로 가능' : `${missing.length}개 부족`}
+                  </Text>
+                </View>
+                <Text style={styles.matchTitle} numberOfLines={1}>
+                  {r.title}
+                </Text>
+                <Text style={styles.matchMeta}>
+                  {formatMinutes(r)} · {r.difficulty}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+        </>
+      )}
       {pantry.length < WELCOME_UNTIL && (
         <WelcomeCard count={pantry.length} owned={owned} onQuickAdd={(name) => addIngredient(name)} />
       )}
@@ -210,8 +245,18 @@ export default function HomeScreen() {
 }
 
 /** 냉장고 현황 카드: 재료 아이콘 몇 개 + 개수 + 바로 만들 수 있는 요리 수. 누르면 재료 관리로 간다. */
-function PantrySummary({ pantry, readyCount }: { pantry: PantryItem[]; readyCount: number }) {
-  const shown = pantry.slice(0, 3);
+function PantrySummary({
+  pantry,
+  soon,
+  readyCount,
+}: {
+  pantry: PantryItem[];
+  soon: PantryItem[];
+  readyCount: number;
+}) {
+  // 곧 상하는 재료가 있으면 그 재료를 앞에 보여 준다.
+  const shown = [...soon, ...pantry.filter((p) => !soon.includes(p))].slice(0, 3);
+  const first = soon[0];
   const rest = pantry.length - shown.length;
   return (
     <Pressable
@@ -233,6 +278,13 @@ function PantrySummary({ pantry, readyCount }: { pantry: PantryItem[]; readyCoun
       </View>
       <View style={styles.summaryText}>
         <Text style={styles.summaryTitle}>내 냉장고 {pantry.length}개</Text>
+        {first && (
+          <Text style={styles.summarySoon} numberOfLines={1}>
+            {soon.length > 1
+              ? `${first.name} 외 ${soon.length - 1}개 곧 상해요`
+              : `${first.name} ${expiryPhrase(daysLeft(first))}`}
+          </Text>
+        )}
         <Text style={readyCount > 0 ? styles.summaryReady : styles.summarySub} numberOfLines={1}>
           {readyCount > 0 ? `바로 가능한 요리 ${readyCount}개` : '재료를 더 넣으면 바로 만들 요리가 생겨요'}
         </Text>
@@ -407,6 +459,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: '#1F7A47',
+  },
+  summarySoon: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#C2360C',
   },
   summarySub: {
     fontSize: 12,
