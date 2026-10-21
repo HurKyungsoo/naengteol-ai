@@ -7,7 +7,7 @@ import { IngredientIcon } from '@/components/IngredientIcon';
 import { BottomBar, PrimaryButton } from '@/components/PrimaryButton';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { analyzeFridgePhoto, type DetectedIngredient } from '@/lib/analyze';
-import { isPerishable } from '@/lib/expiry';
+import { BOUGHT_PRESETS, isPerishable } from '@/lib/expiry';
 import { hasIngredient, normalizeIngredient } from '@/lib/ingredients';
 import { getCapturedPhoto } from '@/lib/photoSession';
 import { useAppState } from '@/state/AppState';
@@ -18,9 +18,7 @@ type Status = 'loading' | 'done' | 'error';
 
 // 냉장고 사진 속 재료는 언제 샀는지 알 수 없어서 한 번만 묻는다. 기본은 "모름".
 const BOUGHT_OPTIONS: { label: string; value: Bought }[] = [
-  { label: '오늘 샀어요', value: { daysAgo: 0 } },
-  { label: '2~3일 전', value: { daysAgo: 3 } },
-  { label: '일주일쯤 전', value: { daysAgo: 7 } },
+  ...BOUGHT_PRESETS.map((p) => ({ label: p.label, value: { daysAgo: p.daysAgo } })),
   { label: '잘 모르겠어요', value: 'unknown' },
 ];
 
@@ -206,7 +204,7 @@ export default function AnalysisScreen() {
                   })}
                 </View>
                 {bought === 'unknown' && (
-                  <Text style={styles.boughtHint}>모르면 보관 기간을 짧게 잡아 미리 알려 드려요.</Text>
+                  <Text style={styles.boughtHint}>나중에 냉장고 탭에서 한꺼번에 정할 수 있어요.</Text>
                 )}
               </View>
             )}

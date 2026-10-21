@@ -18,12 +18,20 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-const PROMPT = `이 사진은 냉장고 내부 또는 식재료 사진입니다. 요리에 쓸 수 있는 식재료만 찾아 주세요.
-- 이름은 한국어 일반 명칭으로 (예: "계란", "대파", "양배추", "두부")
-- 포장이나 가림 때문에 확실하지 않으면 confidence를 낮게 (0~1)
+// 사용자는 체크된 재료를 대부분 그대로 넣으므로, 없는 재료를 넣는 것(오인식)이 빠뜨리는 것보다 나쁘다.
+// 앱은 confidence 0.7 이상만 미리 체크한다.
+const PROMPT = `이 사진은 냉장고 내부 또는 식재료 사진입니다. 요리에 쓸 수 있는 식재료를 찾아 주세요.
+- 이름은 한국 가정에서 흔히 쓰는 한국어 일반 명칭으로 (예: "계란", "대파", "양배추", "두부", "햄")
+- 사진에 실제로 보이는 것만. 색이나 모양이 비슷하다고 다른 재료로 추측하지 마세요 (예: 그릇 속 노란 조각을 바나나로 단정하지 않기)
+- 포장된 재료는 모양이나 라벨로 종류를 알 수 있을 때만 구체적으로. 슬라이스 고기처럼 종류가 애매하면 "햄"처럼 넓은 이름으로
+- confidence 기준: 0.9 이상 = 분명히 보이고 종류도 확실함 / 0.7~0.85 = 보이지만 종류가 조금 애매함 / 0.6 이하 = 일부만 보이거나 추측
+- 문 쪽 칸, 서랍, 뒤쪽처럼 일부 가려진 곳도 살펴보세요
 - 같은 재료는 한 번만
-- 음료, 양념병 라벨, 그릇처럼 재료가 아닌 것은 제외
+- 우유는 포함하고, 주스·탄산음료 같은 마실 것, 양념병, 그릇, 밀폐용기 자체처럼 요리 재료가 아닌 것은 제외
 - 소비기한이나 신선도는 판단하지 마세요`;
+
+// 지시해도 음료를 넣을 때가 있어 한 번 더 거른다. 우유·두유는 요리에 쓰므로 남긴다.
+const DRINK = /(주스|쥬스|음료|콜라|사이다|탄산수|커피|맥주|소주|와인|생수|이온음료)$/;
 
 const RESPONSE_SCHEMA = {
   type: 'OBJECT',
@@ -101,7 +109,10 @@ Deno.serve(async (req) => {
   const text: string | undefined = data?.candidates?.[0]?.content?.parts?.[0]?.text;
   try {
     const parsed = JSON.parse(text ?? '{}');
-    return json({ ingredients: Array.isArray(parsed.ingredients) ? parsed.ingredients : [] });
+    const ingredients: { name: string; confidence: number }[] = Array.isArray(parsed.ingredients)
+      ? parsed.ingredients
+      : [];
+    return json({ ingredients: ingredients.filter((i) => typeof i.name === 'string' && !DRINK.test(i.name.trim())) });
   } catch {
     return json({ ingredients: [] });
   }

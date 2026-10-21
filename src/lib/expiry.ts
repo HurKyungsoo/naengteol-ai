@@ -104,6 +104,18 @@ export function expiryLabel(days: number): string {
 }
 
 /** text·bg: 배지, ink: 흰 바탕 위 글자 */
+/** "언제 샀어요?" 빠른 선택. 정확하지 않아도 되니 대충 고르게 한다. */
+export const BOUGHT_PRESETS = [
+  { label: '오늘 샀어요', daysAgo: 0 },
+  { label: '2~3일 전', daysAgo: 3 },
+  { label: '일주일쯤 전', daysAgo: 7 },
+];
+
+/** 기한을 챙겨야 하는데 산 날을 몰라서 사용자가 확인해 줘야 하는 재료 */
+export function needsCheck(pantry: PantryItem[]): PantryItem[] {
+  return pantry.filter((p) => isTracked(p) && isEstimated(p));
+}
+
 /** 문장으로 쓸 때: "밥 2일 남았어요" */
 export function expiryPhrase(days: number): string {
   if (days < 0) return '기한이 지났어요';
@@ -124,9 +136,12 @@ export function formatMonthDay(ts: number): string {
   return `${d.getMonth() + 1}월 ${d.getDate()}일`;
 }
 
-/** 기한을 관리하는 재료 중 SOON_DAYS 안으로 남았거나 지난 재료, 급한 순 */
+/**
+ * 기한을 관리하는 재료 중 SOON_DAYS 안으로 남았거나 지난 재료, 급한 순.
+ * 산 날을 몰라 추정한 재료는 사진으로 한꺼번에 넣으면 우르르 들어오므로 빼고 needsCheck로 따로 보여 준다.
+ */
 export function expiringItems(pantry: PantryItem[], now = Date.now()): PantryItem[] {
   return pantry
-    .filter((p) => isTracked(p) && daysLeft(p, now) <= SOON_DAYS)
+    .filter((p) => isTracked(p) && !isEstimated(p) && daysLeft(p, now) <= SOON_DAYS)
     .sort((a, b) => daysLeft(a, now) - daysLeft(b, now));
 }

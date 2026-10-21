@@ -37,6 +37,8 @@ type AppStateValue = PersistedState & {
   updateIngredient: (id: string, name: string, amount?: string) => void;
   /** undefined면 기본 보관 기간으로 되돌린다. */
   setExpiry: (id: string, expiresAt: number | undefined) => void;
+  /** 산 날을 몰랐던 재료들의 산 날을 한꺼번에 정한다. */
+  setBought: (ids: string[], daysAgo: number) => void;
   removeIngredient: (id: string) => void;
   clearPantry: () => void;
   toggleFavorite: (recipeId: string) => void;
@@ -120,6 +122,13 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         setState((s) => ({
           ...s,
           pantry: s.pantry.map((p) => (p.id === id ? { ...p, expiresAt } : p)),
+        }));
+      },
+      setBought: (ids, daysAgo) => {
+        const boughtAt = Date.now() - daysAgo * 24 * 60 * 60 * 1000;
+        setState((s) => ({
+          ...s,
+          pantry: s.pantry.map((p) => (ids.includes(p.id) ? { ...p, boughtAt, boughtUnknown: undefined } : p)),
         }));
       },
       removeIngredient: (id) => {

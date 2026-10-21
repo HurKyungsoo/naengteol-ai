@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import { useEffect } from 'react';
 import { Platform } from 'react-native';
 
-import { addDays, daysLeft, isTracked } from '@/lib/expiry';
+import { addDays, daysLeft, isEstimated, isTracked, needsCheck } from '@/lib/expiry';
 import type { PantryItem } from '@/types';
 
 // 소비기한 알림은 기기 안에서 예약하는 로컬 알림이다 (Expo Go에서도 된다). 웹은 지원하지 않는다.
@@ -65,6 +65,27 @@ async function reschedule(pantry: PantryItem[], enabled: boolean): Promise<void>
   if (!(await ensurePermission())) return;
 
   const now = Date.now();
+
+  // 산 날을 몰라 기한을 추정한 재료는 날짜별 알림 대신, 다음 알림 시각에 한 번 확인을 부탁한다.
+  const unchecked = needsCheck(pantry);
+  if (unchecked.length > 0) {
+    const at = new Date(now);
+    at.setHours(NOTIFY_HOUR, 0, 0, 0);
+    if (at.getTime() <= now) at.setDate(at.getDate() + 1);
+    const [first] = unchecked;
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title:
+          unchecked.length === 1
+            ? `${first.name}${subjectParticle(first.name)} 언제 산 건지 알려 주세요`
+            : `${first.name} 외 ${unchecked.length - 1}개, 언제 산 건지 알려 주세요`,
+        body: '대충 골라 주시면 상하기 전에 알려 드릴게요.',
+        data: { url: '/pantry' },
+      },
+      trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: at, channelId: CHANNEL_ID },
+    });
+  }
+
   for (let d = 0; d < SCHEDULE_DAYS; d++) {
     const at = new Date(addDays(now, d));
     at.setHours(NOTIFY_HOUR, 0, 0, 0);
@@ -72,7 +93,7 @@ async function reschedule(pantry: PantryItem[], enabled: boolean): Promise<void>
     // 그날 기준으로 오늘·내일까지인 재료 (이미 지난 재료는 냉장고 화면에서 보여 준다)
     const items = pantry
       .filter((p) => {
-        if (!isTracked(p)) return false;
+        if (!isTracked(p) || isEstimated(p)) return false;
         const left = daysLeft(p, at.getTime());
         return left === 0 || left === 1;
       })
