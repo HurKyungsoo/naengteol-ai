@@ -11,7 +11,7 @@ import { RecipeImage } from '@/components/RecipeImage';
 import { StepScene } from '@/components/StepScene';
 import { goBack, ScreenHeader } from '@/components/ScreenHeader';
 import { useRecipeGuide } from '@/lib/guide';
-import { STEP_ICONS, stepSubject, stepHeat, stepIngredients, stepKind, stepTime } from '@/lib/stepInfo';
+import { STEP_ICONS, stepSubjects, stepHeat, stepIngredients, stepKind, stepTime } from '@/lib/stepInfo';
 import { normalizeIngredient, substitutesFor } from '@/lib/ingredients';
 import { useAppState } from '@/state/AppState';
 import { useRecipes } from '@/state/RecipesProvider';
@@ -207,14 +207,14 @@ export default function CookScreen() {
   );
 }
 
-/** 사진이 없는 단계의 그림. 주인공 재료가 있으면 "도마 위 썰린 토마토"처럼 장면으로, 없으면 동작 아이콘만. */
+/** 사진이 없는 단계의 그림. 들어가는 재료가 있으면 "도마 위 썰린 양파·당근"처럼 장면으로, 없으면 동작 아이콘만. */
 function StepTile({ recipe, step, done }: { recipe: Recipe; step: RecipeStep; done: boolean }) {
   const kind = stepKind(step);
-  const subject = stepSubject(recipe, step);
+  const subjects = stepSubjects(recipe, step);
   return (
     <View style={[styles.stepIcon, done && styles.stepIconDone]}>
-      {subject && kind !== 'roll' ? (
-        <StepScene kind={kind} ingredient={subject} size={72} />
+      {subjects.length > 0 && kind !== 'roll' ? (
+        <StepScene kind={kind} ingredients={subjects} size={72} />
       ) : (
         <Image source={STEP_ICONS[kind]} style={styles.stepIconImage} resizeMode="contain" />
       )}

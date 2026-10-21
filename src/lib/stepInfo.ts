@@ -20,7 +20,7 @@ const KIND_RULES: [StepKind, RegExp][] = [
   ['knife', /썰|손질|다지|자르|채 썰/],
   ['plate', /담|올리|곁들|뿌리/],
   ['pot', /끓|삶|졸이|데치|육수|냄비/],
-  ['pan', /볶|굽|부치|튀기|익히|스크램블|팬/],
+  ['pan', /볶|굽|구워|구우|부치|튀기|익히|스크램블|팬/],
   ['mix', /섞|양념|소스|드레싱|반죽|무치|절이|풀/],
 ];
 
@@ -52,18 +52,19 @@ export function stepIngredients(recipe: Recipe, step: RecipeStep, max = 4): stri
 }
 
 /**
- * 단계의 주인공 재료: 제목에 나오는 재료(토마토 볶기 → 토마토)를 먼저, 없으면 설명에 가장 먼저 나오는 재료.
- * 양념(소금·식용유 등)은 빼고 고른다. 같은 동작이 이어져도 단계마다 그림이 달라지게 이 재료를 크게 보여 준다.
+ * 단계에 들어가는 주재료 (최대 max개). 제목에 나오는 재료(토마토 볶기 → 토마토)가 먼저, 그다음 설명에 나오는 순서.
+ * 양념(소금·식용유 등)은 뺀다. 첫 번째가 주인공이라 장면에서 가장 크게 보여 준다.
  */
-export function stepSubject(recipe: Recipe, step: RecipeStep): string | undefined {
+export function stepSubjects(recipe: Recipe, step: RecipeStep, max = 3): string[] {
   const main = recipe.ingredients.filter((i) => !i.seasoning).map((i) => i.name);
-  const firstIn = (source: string) =>
+  const ordered = (source: string) =>
     main
       .map((name) => {
         const i = source.indexOf(name);
         return { name, at: i >= 0 ? i : source.indexOf(name.replace(/^다진/, '')) };
       })
       .filter((x) => x.at >= 0)
-      .sort((a, b) => a.at - b.at || b.name.length - a.name.length)[0]?.name;
-  return firstIn(step.title ?? '') ?? firstIn(step.text);
+      .sort((a, b) => a.at - b.at || b.name.length - a.name.length)
+      .map((x) => x.name);
+  return [...new Set([...ordered(step.title ?? ''), ...ordered(step.text)])].slice(0, max);
 }
