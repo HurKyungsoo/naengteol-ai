@@ -234,7 +234,7 @@ function IngredientRow({
 }) {
   return (
     <View style={styles.ingredient}>
-      <IngredientIcon name={ingredient.name} size={34} tile />
+      <IngredientIcon name={ingredient.name} size={24} />
       <Text style={styles.ingredientName}>{ingredient.name}</Text>
       {ingredient.optional && <Text style={styles.optional}>선택</Text>}
       {!subtle && (owned ? <View style={styles.ownedDot} /> : <Text style={styles.lack}>부족</Text>)}
