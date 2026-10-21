@@ -134,7 +134,7 @@ export default function AnalysisScreen() {
                     onPress={() => toggle(item.name)}
                     accessibilityRole="checkbox"
                     accessibilityState={{ checked: isChecked }}>
-                    <IngredientIcon name={item.name} size={28} />
+                    <IngredientIcon name={item.name} size={40} tile />
                     <Text style={styles.rowName}>{item.name}</Text>
                     {isOwned && <Text style={styles.ownedBadge}>보유 중</Text>}
                     <View style={styles.spacer} />

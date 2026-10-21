@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions, type CameraType } from 'expo-camera';
 import { router } from 'expo-router';
 import { useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { goBack } from '@/components/ScreenHeader';
@@ -36,23 +36,19 @@ export default function CameraScreen() {
     if (await pickPhotoFromLibrary()) router.replace('/analysis');
   };
 
+  // 권한을 아직 받지 못했으면 촬영 화면 대신 안내 화면 전체를 보여 준다.
+  if (permission && !permission.granted) {
+    return (
+      <PermissionScreen
+        canAskAgain={permission.canAskAgain}
+        onAllow={requestPermission}
+        onLibrary={fromLibrary}
+      />
+    );
+  }
+
   const body = !permission ? (
     <ActivityIndicator color={colors.onInk} />
-  ) : !permission.granted ? (
-    <View style={styles.permission}>
-      <Ionicons name="camera-outline" size={40} color={colors.onInk} />
-      <Text style={styles.permissionText}>냉장고 사진을 찍으려면{'\n'}카메라 권한이 필요해요.</Text>
-      {permission.canAskAgain ? (
-        <Pressable style={styles.permissionButton} onPress={requestPermission}>
-          <Text style={styles.permissionButtonText}>카메라 허용하기</Text>
-        </Pressable>
-      ) : (
-        <Text style={styles.permissionHint}>설정에서 카메라 권한을 켜 주세요.</Text>
-      )}
-      <Pressable onPress={fromLibrary} hitSlop={8}>
-        <Text style={styles.permissionLink}>앨범에서 고르기</Text>
-      </Pressable>
-    </View>
   ) : (
     <CameraView
       ref={cameraRef}
@@ -110,6 +106,79 @@ export default function CameraScreen() {
     </View>
   );
 }
+
+/**
+ * 카메라 권한 안내. 요청 전에는 사진을 어디에 쓰는지 먼저 알리고,
+ * 한 번 거절해서 다시 물을 수 없으면 앱 설정으로 바로 보내 준다.
+ */
+function PermissionScreen({
+  canAskAgain,
+  onAllow,
+  onLibrary,
+}: {
+  canAskAgain: boolean;
+  onAllow: () => void;
+  onLibrary: () => void;
+}) {
+  const insets = useSafeAreaInsets();
+  return (
+    <View style={[styles.screen, { paddingTop: insets.top, paddingBottom: insets.bottom + spacing.xl }]}>
+      <Pressable style={styles.permissionBack} onPress={goBack} hitSlop={10} accessibilityLabel="닫기">
+        <Ionicons name="chevron-back" size={26} color={colors.onInk} />
+      </Pressable>
+
+      <View style={styles.permission}>
+        <View style={styles.permissionIcon}>
+          <Ionicons name={canAskAgain ? 'camera-outline' : 'lock-closed-outline'} size={40} color={colors.onInk} />
+        </View>
+        <Text style={styles.permissionTitle}>
+          {canAskAgain ? '냉장고를 찍으면\n재료를 찾아 드려요' : '카메라 권한이 꺼져 있어요'}
+        </Text>
+        <Text style={styles.permissionText}>
+          {canAskAgain
+            ? '사진을 찍으려면 카메라 권한이 필요해요.'
+            : '설정 › 권한 › 카메라에서 허용으로 바꾸면\n바로 찍을 수 있어요.'}
+        </Text>
+
+        {canAskAgain && (
+          <View style={styles.privacy}>
+            <View style={styles.privacyRow}>
+              <Ionicons name="shield-checkmark-outline" size={18} color={PERMISSION_SOFT} />
+              <Text style={styles.privacyText}>
+                사진은 재료 인식에만 쓰여요. Google Gemini로 분석하고 앱 서버에는 저장하지 않아요.
+              </Text>
+            </View>
+            <View style={styles.privacyRow}>
+              <Ionicons name="person-outline" size={18} color={PERMISSION_SOFT} />
+              <Text style={styles.privacyText}>사람 얼굴이나 개인정보가 찍히지 않게 해 주세요.</Text>
+            </View>
+            <Pressable
+              onPress={() => router.push({ pathname: '/info', params: { topic: 'terms' } })}
+              hitSlop={8}
+              accessibilityRole="link">
+              <Text style={styles.privacyLink}>개인정보처리방침 보기</Text>
+            </Pressable>
+          </View>
+        )}
+      </View>
+
+      <View style={styles.permissionActions}>
+        <Pressable
+          style={({ pressed }) => [styles.permissionButton, pressed && styles.pressed]}
+          onPress={canAskAgain ? onAllow : () => Linking.openSettings()}
+          accessibilityRole="button">
+          <Text style={styles.permissionButtonText}>{canAskAgain ? '카메라 허용하기' : '설정 열기'}</Text>
+        </Pressable>
+        <Pressable style={styles.permissionLinkButton} onPress={onLibrary} accessibilityRole="button">
+          <Text style={styles.permissionLink}>{canAskAgain ? '앨범에서 고르기' : '카메라 없이 앨범에서 고르기'}</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+// 검은 바탕 위 보조 글자색 (흰 바탕의 textSoft에 해당)
+const PERMISSION_SOFT = '#C9C9C6';
 
 const CORNER = 28;
 
@@ -190,36 +259,92 @@ const styles = StyleSheet.create({
     borderRadius: 31,
     backgroundColor: '#fff',
   },
-  permission: {
+  permissionBack: {
+    marginLeft: spacing.md,
+    width: 44,
+    height: 44,
     alignItems: 'center',
-    gap: spacing.lg,
-    padding: spacing.xl,
+    justifyContent: 'center',
   },
-  permissionText: {
+  permission: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.lg,
+    paddingHorizontal: spacing.xxl,
+  },
+  permissionIcon: {
+    width: 88,
+    height: 88,
+    borderRadius: 28,
+    backgroundColor: '#2A2A29',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  permissionTitle: {
     color: colors.onInk,
-    fontSize: 16,
-    lineHeight: 24,
+    fontSize: 22,
+    lineHeight: 31,
+    fontWeight: '700',
     textAlign: 'center',
   },
-  permissionButton: {
-    backgroundColor: colors.onInk,
-    borderRadius: radius.pill,
+  permissionText: {
+    marginTop: -spacing.sm,
+    color: PERMISSION_SOFT,
+    fontSize: 14,
+    lineHeight: 22,
+    textAlign: 'center',
+  },
+  privacy: {
+    alignSelf: 'stretch',
+    padding: spacing.lg,
+    gap: 10,
+    borderRadius: radius.lg - 4,
+    backgroundColor: '#1F1F1E',
+  },
+  privacyRow: {
+    flexDirection: 'row',
+    gap: 10,
+    alignItems: 'flex-start',
+  },
+  privacyText: {
+    flex: 1,
+    color: '#E5E5E2',
+    fontSize: 13,
+    lineHeight: 20,
+  },
+  privacyLink: {
+    marginLeft: 28,
+    color: PERMISSION_SOFT,
+    fontSize: 12,
+    textDecorationLine: 'underline',
+  },
+  permissionActions: {
     paddingHorizontal: spacing.xl,
-    height: 48,
+    gap: spacing.xs,
+  },
+  permissionButton: {
+    height: 54,
+    borderRadius: radius.pill,
+    backgroundColor: colors.onInk,
+    alignItems: 'center',
     justifyContent: 'center',
   },
   permissionButtonText: {
     color: colors.ink,
     fontWeight: '700',
-    fontSize: 15,
+    fontSize: 16,
   },
-  permissionHint: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 13,
+  permissionLinkButton: {
+    height: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   permissionLink: {
-    color: 'rgba(255,255,255,0.8)',
+    color: '#E5E5E2',
     fontSize: 14,
-    textDecorationLine: 'underline',
+  },
+  pressed: {
+    opacity: 0.7,
   },
 });

@@ -1,11 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, type Href } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { useAppState } from '@/state/AppState';
-import { colors, radius, spacing, switchColors } from '@/theme';
+import { colors, radius, spacing } from '@/theme';
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
@@ -67,19 +67,8 @@ export default function MyScreen() {
         </View>
 
         <View style={styles.menu}>
-          {menu.slice(0, 3).map((m) => (
-            <MenuRow key={m.label} {...m} />
-          ))}
-          <View style={styles.menuRow}>
-            <Ionicons name="notifications-outline" size={20} color={colors.text} />
-            <Text style={styles.menuLabel}>알림 설정</Text>
-            <Switch
-              value={profile.notifications}
-              onValueChange={(v) => updateProfile({ notifications: v })}
-              {...switchColors}
-            />
-          </View>
-          {menu.slice(3).map((m) => (
+          {/* 알림 설정은 알림 기능을 만든 뒤에 다시 넣는다 (값만 저장되고 보내는 알림이 없었다) */}
+          {menu.map((m) => (
             <MenuRow key={m.label} {...m} />
           ))}
         </View>

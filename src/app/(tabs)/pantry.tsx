@@ -57,7 +57,7 @@ export default function PantryScreen() {
           ListEmptyComponent={<Text style={styles.empty}>등록된 재료가 없어요.</Text>}
           renderItem={({ item }) => (
             <Pressable style={styles.row} onPress={() => setEditing(item)}>
-              <IngredientIcon name={item.name} size={28} />
+              <IngredientIcon name={item.name} size={40} tile />
               <Text style={styles.name}>{item.name}</Text>
               <View style={styles.spacer} />
               <Text style={styles.amount}>{item.amount ?? '양 입력'}</Text>
