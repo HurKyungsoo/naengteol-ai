@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
+import { useKeepAwake } from 'expo-keep-awake';
 import { useMemo, useState } from 'react';
 import { ActivityIndicator, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,7 +12,8 @@ import { RecipeImage } from '@/components/RecipeImage';
 import { StepScene } from '@/components/StepScene';
 import { goBack, ScreenHeader } from '@/components/ScreenHeader';
 import { useRecipeGuide } from '@/lib/guide';
-import { STEP_ICONS, stepSubjects, stepHeat, stepIngredients, stepKind, stepTime } from '@/lib/stepInfo';
+import { STEP_ICONS, stepSubjects, stepHeat, stepIngredients, stepKind, stepSeconds, stepTime } from '@/lib/stepInfo';
+import { formatSeconds, useStepTimers, type StepTimer } from '@/lib/useStepTimers';
 import { normalizeIngredient, substitutesFor } from '@/lib/ingredients';
 import { useAppState } from '@/state/AppState';
 import { useRecipes } from '@/state/RecipesProvider';
@@ -19,6 +21,8 @@ import { colors, radius, spacing } from '@/theme';
 import type { Recipe, RecipeStep } from '@/types';
 
 export default function CookScreen() {
+  // 요리하는 동안 손이 젖어 있어도 화면을 다시 켤 필요가 없게 한다
+  useKeepAwake();
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { findRecipe } = useRecipes();
@@ -27,6 +31,7 @@ export default function CookScreen() {
   const [done, setDone] = useState<Set<number>>(new Set());
   const [sheet, setSheet] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const timers = useStepTimers();
 
   // 이 레시피에 쓰였을 가능성이 있는 냉장고 재료 (대체 재료 포함, 양념 제외)
   const usable = useMemo(() => {
@@ -124,7 +129,17 @@ export default function CookScreen() {
                 <View style={styles.cardBody}>
                   {step.title && <Text style={styles.stepTitle}>{step.title}</Text>}
                   <Text style={styles.stepText}>{step.text}</Text>
-                  <StepChips recipe={recipe} step={step} />
+                  <StepChips
+                    recipe={recipe}
+                    step={step}
+                    timer={timers.find(index)}
+                    remaining={timers.remaining}
+                    onTimer={() => {
+                      const seconds = stepSeconds(step);
+                      if (timers.find(index)) timers.stop(index);
+                      else if (seconds) timers.start(index, seconds);
+                    }}
+                  />
                   {tips.length > 0 && (
                     <Pressable
                       onPress={(e) => {
@@ -151,6 +166,24 @@ export default function CookScreen() {
           );
         })}
       </ScrollView>
+      {timers.timers.length > 0 && (
+        <View style={styles.timerBar}>
+          {[...timers.timers]
+            .sort((x, y) => x.endAt - y.endAt)
+            .map((t) => (
+              <TimerCard
+                key={t.index}
+                recipe={recipe}
+                step={recipe.steps[t.index]}
+                timer={t}
+                left={timers.remaining(t)}
+                fraction={timers.fraction(t)}
+                onAddMinute={() => timers.addMinute(t.index)}
+                onStop={() => timers.stop(t.index)}
+              />
+            ))}
+        </View>
+      )}
       <BottomBar>
         {/* 한 단계도 체크하지 않았으면 기록·재료 정리 없이 나간다 */}
         {done.size === 0 ? (
@@ -208,22 +241,112 @@ export default function CookScreen() {
 }
 
 /** 사진이 없는 단계의 그림. 들어가는 재료가 있으면 "도마 위 썰린 양파·당근"처럼 장면으로, 없으면 동작 아이콘만. */
-function StepTile({ recipe, step, done }: { recipe: Recipe; step: RecipeStep; done: boolean }) {
+function StepTile({ recipe, step, done, size = 72 }: { recipe: Recipe; step: RecipeStep; done: boolean; size?: number }) {
   const kind = stepKind(step);
   const subjects = stepSubjects(recipe, step);
   return (
-    <View style={[styles.stepIcon, done && styles.stepIconDone]}>
+    <View style={[styles.stepIcon, { width: size, height: size }, done && styles.stepIconDone]}>
       {subjects.length > 0 && kind !== 'roll' ? (
-        <StepScene kind={kind} ingredients={subjects} size={72} />
+        <StepScene kind={kind} ingredients={subjects} size={size} />
       ) : (
-        <Image source={STEP_ICONS[kind]} style={styles.stepIconImage} resizeMode="contain" />
+        <Image source={STEP_ICONS[kind]} style={{ width: size * 0.8, height: size * 0.8 }} resizeMode="contain" />
       )}
     </View>
   );
 }
 
-/** 단계의 핵심 정보: 시간, 불 세기, 들어가는 재료 */
-function StepChips({ recipe, step }: { recipe: Recipe; step: RecipeStep }) {
+/**
+ * 화면 아래 타이머 카드: 단계 그림·이름·남은 시간, 아래 선이 남은 시간만큼 줄어든다.
+ * 끝나면 초록 카드로 바뀌고 [확인]으로 끈다.
+ */
+function TimerCard({
+  recipe,
+  step,
+  timer,
+  left,
+  fraction,
+  onAddMinute,
+  onStop,
+}: {
+  recipe: Recipe;
+  step: RecipeStep;
+  timer: StepTimer;
+  left: number;
+  fraction: number;
+  onAddMinute: () => void;
+  onStop: () => void;
+}) {
+  const label = `${timer.index + 1}단계`;
+  const name = step.title ?? step.text;
+  const kind = stepKind(step);
+  const visual = step.image ? (
+    <RecipeImage recipe={recipe} imageUri={step.image} width={44} height={44} radius={12} />
+  ) : (
+    <StepTile recipe={recipe} step={step} done={false} size={44} />
+  );
+
+  if (left === 0) {
+    return (
+      <View style={[styles.timerCard, styles.timerCardDone]}>
+        {visual}
+        <View style={styles.timerCardBody}>
+          <Text style={[styles.timerCardLabel, styles.timerCardLabelDone]}>
+            {label} · {formatSeconds(timer.total)}
+          </Text>
+          <Text style={[styles.timerCardName, styles.onInk]} numberOfLines={1}>
+            {kind === 'pot' || kind === 'pan' ? '다 됐어요! 불을 확인하세요' : '다 됐어요!'}
+          </Text>
+        </View>
+        <Pressable onPress={onStop} hitSlop={6} accessibilityRole="button" style={[styles.timerButton, styles.timerButtonDone]}>
+          <Text style={[styles.timerButtonText, styles.onInk]}>확인</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.timerCard}>
+      {visual}
+      <View style={styles.timerCardBody}>
+        <Text style={styles.timerCardLabel}>{label}</Text>
+        <Text style={styles.timerCardName} numberOfLines={1}>
+          {name}
+        </Text>
+      </View>
+      <Text style={styles.timerCardTime}>{formatSeconds(left)}</Text>
+      <Pressable onPress={onAddMinute} hitSlop={4} accessibilityRole="button" accessibilityLabel="1분 더" style={styles.timerButton}>
+        <Text style={styles.timerButtonText}>+1분</Text>
+      </Pressable>
+      <Pressable
+        onPress={onStop}
+        hitSlop={4}
+        accessibilityRole="button"
+        accessibilityLabel={`${label} 타이머 취소`}
+        style={[styles.timerButton, styles.timerButtonRound]}>
+        <Ionicons name="close" size={16} color={colors.text} />
+      </Pressable>
+      {/* 남은 시간만큼 채운 선이 오른쪽에서부터 줄어든다 */}
+      <View style={styles.timerTrack}>
+        <View style={[styles.timerFill, { width: `${fraction * 100}%` }]} />
+      </View>
+    </View>
+  );
+}
+
+/** 단계의 핵심 정보: 시간(누르면 타이머), 불 세기, 들어가는 재료 */
+function StepChips({
+  recipe,
+  step,
+  timer,
+  remaining,
+  onTimer,
+}: {
+  recipe: Recipe;
+  step: RecipeStep;
+  timer?: StepTimer;
+  remaining: (timer: StepTimer) => number;
+  onTimer: () => void;
+}) {
   const time = stepTime(step);
   const heat = stepHeat(step);
   const ingredients = stepIngredients(recipe, step);
@@ -231,10 +354,30 @@ function StepChips({ recipe, step }: { recipe: Recipe; step: RecipeStep }) {
   return (
     <View style={styles.stepChips}>
       {time && (
-        <View style={[styles.stepChip, styles.timeChip]}>
-          <Ionicons name="timer-outline" size={13} color={colors.onInk} />
-          <Text style={styles.timeChipText}>{time}</Text>
-        </View>
+        <Pressable
+          onPress={(e) => {
+            // 바깥 단계 카드(누르면 완료 체크)까지 눌리지 않게 한다.
+            e.stopPropagation();
+            onTimer();
+          }}
+          hitSlop={6}
+          accessibilityRole="button"
+          accessibilityLabel={timer ? '타이머 끄기' : `${time} 타이머 시작`}
+          style={[
+            styles.stepChip,
+            styles.timeChip,
+            timer && styles.timeChipRunning,
+            timer && remaining(timer) === 0 && styles.timeChipDone,
+          ]}>
+          <Ionicons
+            name={!timer ? 'play' : remaining(timer) === 0 ? 'alarm' : 'stop'}
+            size={11}
+            color={colors.onInk}
+          />
+          <Text style={styles.timeChipText}>
+            {!timer ? time : remaining(timer) === 0 ? '끝!' : formatSeconds(remaining(timer))}
+          </Text>
+        </Pressable>
       )}
       {heat && (
         <View style={[styles.stepChip, styles.heatChip]}>
@@ -330,10 +473,6 @@ const styles = StyleSheet.create({
   stepIconDone: {
     backgroundColor: colors.successSoft,
   },
-  stepIconImage: {
-    width: 58,
-    height: 58,
-  },
   stepChips: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -351,10 +490,101 @@ const styles = StyleSheet.create({
   timeChip: {
     backgroundColor: colors.ink,
   },
+  timeChipRunning: {
+    backgroundColor: colors.accent,
+  },
+  timeChipDone: {
+    backgroundColor: colors.success,
+  },
   timeChipText: {
     fontSize: 12,
     fontWeight: '700',
     color: colors.onInk,
+    fontVariant: ['tabular-nums'],
+  },
+  timerBar: {
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.sm,
+    gap: spacing.xs,
+  },
+  timerCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingVertical: 10,
+    paddingHorizontal: spacing.md,
+    borderRadius: 22,
+    overflow: 'hidden',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: '#F0EEEA',
+    boxShadow: '0px 6px 20px rgba(17, 17, 17, 0.10)',
+  },
+  timerCardDone: {
+    backgroundColor: colors.success,
+    borderColor: colors.success,
+    boxShadow: '0px 6px 20px rgba(46, 155, 94, 0.30)',
+  },
+  timerCardBody: {
+    flex: 1,
+    gap: 1,
+  },
+  timerCardLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textMuted,
+  },
+  timerCardLabelDone: {
+    color: '#CDEBDA',
+  },
+  timerCardName: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  timerCardTime: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: colors.accent,
+    fontVariant: ['tabular-nums'],
+  },
+  onInk: {
+    color: colors.onInk,
+  },
+  timerButton: {
+    height: 34,
+    minWidth: 34,
+    paddingHorizontal: 10,
+    borderRadius: 17,
+    backgroundColor: colors.surfaceMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  timerButtonRound: {
+    paddingHorizontal: 0,
+  },
+  timerButtonDone: {
+    paddingHorizontal: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  timerButtonText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: colors.text,
+  },
+  timerTrack: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 4,
+    backgroundColor: '#FCE3D6',
+  },
+  timerFill: {
+    height: '100%',
+    borderTopRightRadius: 4,
+    borderBottomRightRadius: 4,
+    backgroundColor: colors.accent,
   },
   heatChip: {
     backgroundColor: colors.accentSoft,
