@@ -40,3 +40,19 @@ export function stepIngredients(recipe: Recipe, step: RecipeStep, max = 4): stri
     .filter((name) => step.text.includes(name) || step.text.includes(name.replace(/^다진/, '')));
   return [...new Set(found)].slice(0, max);
 }
+
+/**
+ * "두부와 다진마늘을 넣고…"처럼 재료를 넣는 단계면 설명에 가장 먼저 나오는 재료.
+ * 같은 동작(끓이기)이 이어져도 단계마다 그림이 달라지게, 이 재료를 크게 보여 주고 동작은 작은 배지로 단다.
+ */
+export function stepAddedIngredient(recipe: Recipe, step: RecipeStep): string | undefined {
+  if (!/넣/.test(step.text)) return undefined;
+  const at = (name: string) => {
+    const i = step.text.indexOf(name);
+    return i >= 0 ? i : step.text.indexOf(name.replace(/^다진/, ''));
+  };
+  return recipe.ingredients
+    .map((i) => ({ name: i.name, at: at(i.name) }))
+    .filter((x) => x.at >= 0)
+    .sort((a, b) => a.at - b.at)[0]?.name;
+}
