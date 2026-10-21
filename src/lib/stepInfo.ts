@@ -38,6 +38,13 @@ export function stepTime(step: RecipeStep): string | undefined {
   return step.text.match(/\d+(?:\.\d+)?\s*(?:분|초)/)?.[0].replace(/\s+/g, '');
 }
 
+/** 설명에 적힌 시간을 초로 ("1.5분" → 90). 타이머에 쓴다. */
+export function stepSeconds(step: RecipeStep): number | undefined {
+  const m = step.text.match(/(\d+(?:\.\d+)?)\s*(분|초)/);
+  if (!m) return undefined;
+  return Math.round(Number(m[1]) * (m[2] === '분' ? 60 : 1));
+}
+
 /** "약불", "중불"처럼 설명에 적힌 불 세기 */
 export function stepHeat(step: RecipeStep): string | undefined {
   return step.text.match(/중약불|약불|중불|강불|센불/)?.[0];
