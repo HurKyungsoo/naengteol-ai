@@ -7,7 +7,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { IngredientIcon } from '@/components/IngredientIcon';
 import { RecipeImage } from '@/components/RecipeImage';
 import { DotsIcon } from '@/components/ScreenHeader';
-import { recommendRecipes } from '@/lib/recommend';
+import { hasIngredient } from '@/lib/ingredients';
+import { pantryNameSet, recommendRecipes } from '@/lib/recommend';
 import { formatDuration, useVideoIndex, videoThumbnail } from '@/lib/video';
 import { useAppState } from '@/state/AppState';
 import { useRecipes } from '@/state/RecipesProvider';
@@ -19,6 +20,7 @@ export default function HomeScreen() {
   const { pantry, recentViewed, preferences, addIngredient, setPreferences } = useAppState();
   const { recipes, findRecipe } = useRecipes();
   const [text, setText] = useState('');
+  const owned = useMemo(() => pantryNameSet(pantry), [pantry]);
 
   const recent = recentViewed.flatMap((id) => findRecipe(id) ?? []);
   const suggested = useMemo(
@@ -94,7 +96,7 @@ export default function HomeScreen() {
         </Pressable>
       </View>
 
-      {pantry.length > 0 ? (
+      {pantry.length > 0 && (
         <Pressable style={styles.pantryLink} onPress={() => router.navigate('/pantry')}>
           <Text style={styles.pantryLinkText} numberOfLines={1}>
             {`내 냉장고 ${pantry.length}개 · ${pantry
@@ -104,8 +106,9 @@ export default function HomeScreen() {
           </Text>
           <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
         </Pressable>
-      ) : (
-        <WelcomeCard onQuickAdd={(name) => addIngredient(name)} />
+      )}
+      {pantry.length < WELCOME_UNTIL && (
+        <WelcomeCard count={pantry.length} owned={owned} onQuickAdd={(name) => addIngredient(name)} />
       )}
 
       <View style={styles.grid}>
@@ -178,17 +181,31 @@ export default function HomeScreen() {
 }
 
 const QUICK_ADD = ['계란', '양파', '두부', '대파'];
+/** 재료가 이만큼 모일 때까지 안내 카드를 보여 준다. 칩을 여러 개 연달아 누를 수 있게 한다. */
+const WELCOME_UNTIL = 3;
 
-/** 냉장고가 비어 있을 때(첫 실행) 검색창 아래에 보여 주는 안내 카드. 재료가 생기면 사라진다. */
-function WelcomeCard({ onQuickAdd }: { onQuickAdd: (name: string) => void }) {
+/** 첫 실행처럼 냉장고 재료가 적을 때 검색창 아래에 보여 주는 안내 카드 */
+function WelcomeCard({
+  count,
+  owned,
+  onQuickAdd,
+}: {
+  count: number;
+  owned: Set<string>;
+  onQuickAdd: (name: string) => void;
+}) {
   return (
     <View style={styles.welcome}>
       <View style={styles.welcomeStickers} pointerEvents="none">
         <IngredientIcon icon="tomato" size={52} style={styles.welcomeTomato} />
         <IngredientIcon icon="egg" size={42} style={styles.welcomeEgg} />
       </View>
-      <Text style={styles.welcomeEyebrow}>처음 오셨네요</Text>
-      <Text style={styles.welcomeTitle}>냉장고 재료부터{'\n'}등록해 볼까요?</Text>
+      <Text style={styles.welcomeEyebrow}>
+        {count === 0 ? '처음 오셨네요' : `좋아요! ${WELCOME_UNTIL - count}개만 더 넣어 볼까요?`}
+      </Text>
+      <Text style={styles.welcomeTitle}>
+        {count === 0 ? '냉장고 재료부터\n등록해 볼까요?' : '재료가 많을수록\n추천이 정확해져요'}
+      </Text>
       <Text style={styles.welcomeBody}>사진 한 장이면 AI가 재료를 찾아 줘요.</Text>
       <Pressable
         style={({ pressed }) => [styles.welcomeButton, pressed && styles.pressed]}
@@ -198,16 +215,23 @@ function WelcomeCard({ onQuickAdd }: { onQuickAdd: (name: string) => void }) {
         <Text style={styles.welcomeButtonText}>사진으로 등록</Text>
       </Pressable>
       <View style={styles.quickRow}>
-        {QUICK_ADD.map((name) => (
-          <Pressable
-            key={name}
-            style={({ pressed }) => [styles.quickChip, pressed && styles.pressed]}
-            onPress={() => onQuickAdd(name)}
-            accessibilityRole="button"
-            accessibilityLabel={`${name} 추가`}>
-            <Text style={styles.quickChipText}>+ {name}</Text>
-          </Pressable>
-        ))}
+        {QUICK_ADD.map((name) => {
+          const added = hasIngredient(owned, name);
+          return (
+            <Pressable
+              key={name}
+              style={({ pressed }) => [styles.quickChip, added && styles.quickChipAdded, pressed && styles.pressed]}
+              onPress={() => onQuickAdd(name)}
+              disabled={added}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: added }}
+              accessibilityLabel={added ? `${name} 추가됨` : `${name} 추가`}>
+              <Text style={[styles.quickChipText, added && styles.quickChipTextAdded]}>
+                {added ? '✓' : '+'} {name}
+              </Text>
+            </Pressable>
+          );
+        })}
       </View>
     </View>
   );
@@ -348,6 +372,13 @@ const styles = StyleSheet.create({
   quickChipText: {
     fontSize: 13,
     color: colors.text,
+  },
+  quickChipAdded: {
+    backgroundColor: colors.successSoft,
+  },
+  quickChipTextAdded: {
+    color: '#1F7A47',
+    fontWeight: '700',
   },
   pantryLinkText: {
     flexShrink: 1,
