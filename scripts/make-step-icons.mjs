@@ -52,6 +52,16 @@ const ICONS = {
     <rect x="60" y="250" width="110" height="46" rx="23" transform="rotate(-28 115 273)" fill="#4A3426"/>
     <circle cx="300" cy="380" r="28" fill="#F08A3C"/>
     <circle cx="350" cy="370" r="24" fill="#7CBF4E"/>`,
+  // 음식이 담긴 접시 (담기·올리기·뿌리기)
+  plate: `
+    <ellipse cx="256" cy="300" rx="220" ry="120" fill="#E6E9ED"/>
+    <ellipse cx="256" cy="290" rx="220" ry="114" fill="#FFFFFF"/>
+    <ellipse cx="256" cy="290" rx="150" ry="74" fill="#F1F3F5"/>
+    <path d="M150 290 c10 -60 70 -90 110 -86 c50 4 100 40 104 86 c-40 26 -170 30 -214 0z" fill="#F2B84B"/>
+    <circle cx="210" cy="250" r="16" fill="#E2553F"/>
+    <circle cx="272" cy="236" r="14" fill="#7CBF4E"/>
+    <circle cx="316" cy="262" r="12" fill="#7CBF4E"/>
+    <circle cx="246" cy="276" r="9" fill="#FFFFFF"/>`,
   // 김이 나는 냄비
   pot: `
     <path d="M200 100 c-20 -30 20 -50 0 -80" fill="none" stroke="#D5DADF" stroke-width="18" stroke-linecap="round"/>

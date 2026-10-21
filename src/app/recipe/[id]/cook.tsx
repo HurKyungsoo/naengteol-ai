@@ -10,7 +10,7 @@ import { BottomBar, PrimaryButton } from '@/components/PrimaryButton';
 import { RecipeImage } from '@/components/RecipeImage';
 import { goBack, ScreenHeader } from '@/components/ScreenHeader';
 import { useRecipeGuide } from '@/lib/guide';
-import { STEP_ICONS, stepAddedIngredient, stepHeat, stepIngredients, stepKind, stepTime } from '@/lib/stepInfo';
+import { STEP_ICONS, stepSubject, stepHeat, stepIngredients, stepKind, stepTime } from '@/lib/stepInfo';
 import { normalizeIngredient, substitutesFor } from '@/lib/ingredients';
 import { useAppState } from '@/state/AppState';
 import { useRecipes } from '@/state/RecipesProvider';
@@ -206,15 +206,15 @@ export default function CookScreen() {
   );
 }
 
-/** 사진이 없는 단계의 그림. 재료를 넣는 단계는 그 재료를 크게, 동작(냄비·팬 등)은 오른쪽 아래 배지로. */
+/** 사진이 없는 단계의 그림. 주인공 재료를 크게, 동작(냄비·팬 등)은 오른쪽 아래 배지로. 재료가 없으면 동작만. */
 function StepTile({ recipe, step, done }: { recipe: Recipe; step: RecipeStep; done: boolean }) {
   const kind = stepKind(step);
-  const added = stepAddedIngredient(recipe, step);
+  const subject = stepSubject(recipe, step);
   return (
     <View style={[styles.stepIcon, done && styles.stepIconDone]}>
-      {added ? (
+      {subject ? (
         <>
-          <IngredientIcon name={added} size={50} />
+          <IngredientIcon name={subject} size={50} />
           <View style={styles.stepBadge}>
             <Image source={STEP_ICONS[kind]} style={styles.stepBadgeImage} resizeMode="contain" />
           </View>

@@ -3,7 +3,7 @@ import type { ImageSourcePropType } from 'react-native';
 import type { Recipe, RecipeStep } from '@/types';
 
 /** 조리 동작. 단계 사진이 없을 때 사진 자리에 동작 아이콘을 보여 준다 (scripts/make-step-icons.mjs). */
-export type StepKind = 'mix' | 'pan' | 'roll' | 'knife' | 'pot';
+export type StepKind = 'mix' | 'pan' | 'roll' | 'knife' | 'pot' | 'plate';
 
 export const STEP_ICONS: Record<StepKind, ImageSourcePropType> = {
   mix: require('../../assets/steps/mix.png'),
@@ -11,15 +11,25 @@ export const STEP_ICONS: Record<StepKind, ImageSourcePropType> = {
   roll: require('../../assets/steps/roll.png'),
   knife: require('../../assets/steps/knife.png'),
   pot: require('../../assets/steps/pot.png'),
+  plate: require('../../assets/steps/plate.png'),
 };
 
-/** 단계 제목·설명에 나오는 말로 동작을 고른다. 여러 동작이 섞이면 앞의 규칙이 이긴다. */
+// 앞의 규칙이 이긴다. "양파를 볶다가 물을 붓고 끓여"처럼 여러 동작이 섞이면 제목으로 먼저 고른다.
+const KIND_RULES: [StepKind, RegExp][] = [
+  ['roll', /말아|말기/],
+  ['knife', /썰|손질|다지|자르|채 썰/],
+  ['plate', /담|올리|곁들|뿌리/],
+  ['pot', /끓|삶|졸이|데치|육수|냄비/],
+  ['pan', /볶|굽|부치|튀기|익히|스크램블|팬/],
+  ['mix', /섞|양념|소스|드레싱|반죽|무치|절이|풀/],
+];
+
+/** 단계 동작. 제목에서 먼저 찾고, 없으면 설명에서 찾는다. */
 export function stepKind(step: RecipeStep): StepKind {
-  const t = `${step.title ?? ''} ${step.text}`;
-  if (/말아|말기/.test(t)) return 'roll';
-  if (/썰|손질|다지|자르/.test(t)) return 'knife';
-  if (/끓|냄비|육수|삶/.test(t)) return 'pot';
-  if (/팬|볶|굽|부치|튀기/.test(t)) return 'pan';
+  for (const source of [step.title ?? '', step.text]) {
+    const found = KIND_RULES.find(([, re]) => re.test(source));
+    if (found) return found[0];
+  }
   return 'mix';
 }
 
@@ -42,17 +52,18 @@ export function stepIngredients(recipe: Recipe, step: RecipeStep, max = 4): stri
 }
 
 /**
- * "두부와 다진마늘을 넣고…"처럼 재료를 넣는 단계면 설명에 가장 먼저 나오는 재료.
- * 같은 동작(끓이기)이 이어져도 단계마다 그림이 달라지게, 이 재료를 크게 보여 주고 동작은 작은 배지로 단다.
+ * 단계의 주인공 재료: 제목에 나오는 재료(토마토 볶기 → 토마토)를 먼저, 없으면 설명에 가장 먼저 나오는 재료.
+ * 양념(소금·식용유 등)은 빼고 고른다. 같은 동작이 이어져도 단계마다 그림이 달라지게 이 재료를 크게 보여 준다.
  */
-export function stepAddedIngredient(recipe: Recipe, step: RecipeStep): string | undefined {
-  if (!/넣/.test(step.text)) return undefined;
-  const at = (name: string) => {
-    const i = step.text.indexOf(name);
-    return i >= 0 ? i : step.text.indexOf(name.replace(/^다진/, ''));
-  };
-  return recipe.ingredients
-    .map((i) => ({ name: i.name, at: at(i.name) }))
-    .filter((x) => x.at >= 0)
-    .sort((a, b) => a.at - b.at)[0]?.name;
+export function stepSubject(recipe: Recipe, step: RecipeStep): string | undefined {
+  const main = recipe.ingredients.filter((i) => !i.seasoning).map((i) => i.name);
+  const firstIn = (source: string) =>
+    main
+      .map((name) => {
+        const i = source.indexOf(name);
+        return { name, at: i >= 0 ? i : source.indexOf(name.replace(/^다진/, '')) };
+      })
+      .filter((x) => x.at >= 0)
+      .sort((a, b) => a.at - b.at || b.name.length - a.name.length)[0]?.name;
+  return firstIn(step.title ?? '') ?? firstIn(step.text);
 }
