@@ -8,7 +8,22 @@ import { IngredientIcon } from '@/components/IngredientIcon';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { RecipeImage } from '@/components/RecipeImage';
 import { ScreenHeader } from '@/components/ScreenHeader';
-import { recommendRecipes } from '@/lib/recommend';
+import {
+  addDays,
+  BOUGHT_PRESETS,
+  daysLeft,
+  EXPIRY_COLORS,
+  expiringItems,
+  expiryLabel,
+  expiryLevel,
+  expiryOf,
+  formatMonthDay,
+  isPerishable,
+  isTracked,
+  needsCheck,
+  startOfDay,
+} from '@/lib/expiry';
+import { matchesUsing, recommendRecipes } from '@/lib/recommend';
 import { SHELVES, shelfOf } from '@/lib/shelves';
 import { useAppState } from '@/state/AppState';
 import { useRecipes } from '@/state/RecipesProvider';
@@ -28,7 +43,7 @@ function formatDate(ts: number): string {
 export default function PantryScreen() {
   const params = useLocalSearchParams<{ tab?: Tab }>();
   const insets = useSafeAreaInsets();
-  const { pantry, cookLogs, removeIngredient } = useAppState();
+  const { pantry, cookLogs, removeIngredient, setBought } = useAppState();
   const { recipes, findRecipe } = useRecipes();
   const [tab, setTab] = useState<Tab>(params.tab ?? 'owned');
   const [editMode, setEditMode] = useState(false);
@@ -44,11 +59,12 @@ export default function PantryScreen() {
     if (params.tab) setTab(params.tab);
   }
 
+  const matches = useMemo(() => recommendRecipes(recipes, pantry, { preferOwned: true }), [recipes, pantry]);
   // 재료가 다 갖춰진 요리가 있을 때만 아래 추천 패널을 띄운다.
-  const ready = useMemo(
-    () => recommendRecipes(recipes, pantry, { preferOwned: true }).filter((m) => m.missing.length === 0),
-    [recipes, pantry],
-  );
+  const ready = useMemo(() => matches.filter((m) => m.missing.length === 0), [matches]);
+  const soon = useMemo(() => expiringItems(pantry, now), [pantry, now]);
+  const unchecked = useMemo(() => needsCheck(pantry), [pantry]);
+  const soonRecipes = useMemo(() => matchesUsing(matches, soon).slice(0, 6), [matches, soon]);
 
   if (tab === 'history') {
     return (
@@ -87,9 +103,12 @@ export default function PantryScreen() {
     );
   }
 
-  const shelves = SHELVES.map((s) => ({ ...s, items: pantry.filter((p) => shelfOf(p.name) === s.id) })).filter(
-    (s) => s.items.length > 0,
-  );
+  // 칸 안에서는 소비기한이 급한 재료부터, 기한을 관리하지 않는 재료는 뒤에 놓는다.
+  const order = (p: PantryItem) => (isTracked(p) ? expiryOf(p) : Infinity);
+  const shelves = SHELVES.map((s) => ({
+    ...s,
+    items: pantry.filter((p) => shelfOf(p.name) === s.id).sort((a, b) => order(a) - order(b)),
+  })).filter((s) => s.items.length > 0);
 
   return (
     <View style={styles.screen}>
@@ -128,6 +147,92 @@ export default function PantryScreen() {
           </Pressable>
         </View>
 
+        {unchecked.length > 0 && !editMode && (
+          <View style={styles.check}>
+            <View style={styles.soonHeader}>
+              <Ionicons name="help-circle-outline" size={18} color={colors.textSoft} />
+              <Text style={styles.soonTitle}>언제 샀는지 알려 주세요</Text>
+              <Text style={styles.checkCount}>{unchecked.length}개</Text>
+            </View>
+            <Text style={styles.checkSub}>대충 골라도 돼요. 상하기 전에 알려 드릴게요.</Text>
+            <View style={styles.soonChips}>
+              {unchecked.map((item) => (
+                <Pressable
+                  key={item.id}
+                  style={({ pressed }) => [styles.soonChip, pressed && styles.pressed]}
+                  onPress={() => setEditing(item)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${item.name} 산 날 정하기`}>
+                  <IngredientIcon name={item.name} size={18} />
+                  <Text style={styles.soonChipName}>{item.name}</Text>
+                </Pressable>
+              ))}
+            </View>
+            <View style={styles.checkActions}>
+              {BOUGHT_PRESETS.map((p) => (
+                <Pressable
+                  key={p.label}
+                  style={({ pressed }) => [styles.checkButton, pressed && styles.pressed]}
+                  onPress={() => setBought(unchecked.map((i) => i.id), p.daysAgo)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`모두 ${p.label}`}>
+                  <Text style={styles.checkButtonText}>{p.label}</Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {soon.length > 0 && !editMode && (
+          <View style={styles.soon}>
+            <View style={styles.soonHeader}>
+              <Ionicons name="alarm-outline" size={18} color="#C2360C" />
+              <Text style={styles.soonTitle}>곧 상해요</Text>
+              <Text style={styles.soonCount}>{soon.length}개</Text>
+            </View>
+            <View style={styles.soonChips}>
+              {soon.map((item) => {
+                const days = daysLeft(item, now);
+                return (
+                  <Pressable
+                    key={item.id}
+                    style={({ pressed }) => [styles.soonChip, pressed && styles.pressed]}
+                    onPress={() => setEditing(item)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${item.name} ${expiryLabel(days)}, 소비기한 수정`}>
+                    <IngredientIcon name={item.name} size={18} />
+                    <Text style={styles.soonChipName}>{item.name}</Text>
+                    <Text style={[styles.soonChipDays, { color: EXPIRY_COLORS[expiryLevel(days)].ink }]}>
+                      {expiryLabel(days)}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+            {soonRecipes.length > 0 && (
+              <>
+                <Text style={styles.soonSub}>이 재료부터 써 볼까요?</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.panelList}>
+                  {soonRecipes.map(({ recipe, missing }) => (
+                    <Pressable
+                      key={recipe.id}
+                      style={styles.panelItem}
+                      onPress={() => router.push({ pathname: '/recipe/[id]', params: { id: recipe.id } })}>
+                      <RecipeImage recipe={recipe} width={104} height={64} radius={12} />
+                      <Text style={styles.panelItemTitle} numberOfLines={1}>
+                        {recipe.title}
+                      </Text>
+                      <Text style={missing.length === 0 ? styles.soonReady : styles.soonMissing}>
+                        {missing.length === 0 ? '바로 가능' : `${missing.length}개 부족`}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              </>
+            )}
+          </View>
+        )}
+
         <View style={styles.fridge}>
           {shelves.length === 0 && <Text style={styles.fridgeEmpty}>냉장고가 비었어요. 재료를 넣어 볼까요?</Text>}
           {shelves.map((s) => (
@@ -139,6 +244,9 @@ export default function PantryScreen() {
               <View style={styles.tiles}>
                 {s.items.map((item) => {
                   const isNew = !editMode && now - item.addedAt < NEW_MS;
+                  const days = daysLeft(item, now);
+                  const level = expiryLevel(days);
+                  const showExpiry = !editMode && level !== 'ok' && isTracked(item);
                   return (
                     <Pressable
                       key={item.id}
@@ -161,6 +269,15 @@ export default function PantryScreen() {
                         </View>
                       )}
                       {isNew && <Text style={styles.newBadge}>NEW</Text>}
+                      {showExpiry && (
+                        <Text
+                          style={[
+                            styles.expiryBadge,
+                            { color: EXPIRY_COLORS[level].text, backgroundColor: EXPIRY_COLORS[level].bg },
+                          ]}>
+                          {days < 0 ? '지남' : days === 0 ? '오늘' : `D-${days}`}
+                        </Text>
+                      )}
                     </Pressable>
                   );
                 })}
@@ -205,11 +322,33 @@ export default function PantryScreen() {
   );
 }
 
+const EXPIRY_PRESETS = [
+  { label: '오늘', days: 0 },
+  { label: '3일 뒤', days: 3 },
+  { label: '1주 뒤', days: 7 },
+  { label: '2주 뒤', days: 14 },
+  { label: '한 달 뒤', days: 30 },
+];
+
 function EditSheet({ item, onClose }: { item: PantryItem; onClose: () => void }) {
   const insets = useSafeAreaInsets();
-  const { updateIngredient, removeIngredient } = useAppState();
+  const { updateIngredient, removeIngredient, setExpiry, setBought } = useAppState();
   const [name, setName] = useState(item.name);
   const [amount, setAmount] = useState(item.amount ?? '');
+  // 직접 정하지 않았으면 undefined로 두어, 이름을 바꾸면 기본 보관 기간도 따라 바뀌게 한다.
+  const [customExpiry, setCustomExpiry] = useState(item.expiresAt);
+  // 산 날을 몰랐던 재료에서 "언제 샀어요?"를 고른 값
+  const [boughtDaysAgo, setBoughtDaysAgo] = useState<number>();
+  const [today] = useState(() => startOfDay(Date.now()));
+  const base: PantryItem =
+    boughtDaysAgo === undefined
+      ? { ...item, name }
+      : { ...item, name, boughtUnknown: undefined, boughtAt: addDays(today, -boughtDaysAgo) };
+  const expiry = expiryOf({ ...base, expiresAt: customExpiry });
+  const askBought = !!item.boughtUnknown && customExpiry === undefined;
+  const days = daysLeft({ ...item, expiresAt: expiry }, today);
+  const perishable = isPerishable(name);
+  const tracked = customExpiry !== undefined || perishable;
 
   return (
     <Modal visible transparent animationType="slide" onRequestClose={onClose}>
@@ -230,6 +369,95 @@ function EditSheet({ item, onClose }: { item: PantryItem; onClose: () => void })
           placeholderTextColor={colors.textMuted}
           style={styles.input}
         />
+        {askBought && tracked && (
+          <>
+            <Text style={styles.label}>언제 샀어요?</Text>
+            <View style={styles.expiryQuick}>
+              {BOUGHT_PRESETS.map((p) => {
+                const on = boughtDaysAgo === p.daysAgo;
+                return (
+                  <Pressable
+                    key={p.label}
+                    style={[styles.expiryChip, on && styles.expiryChipOn]}
+                    onPress={() => setBoughtDaysAgo(p.daysAgo)}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected: on }}>
+                    <Text style={[styles.expiryChipText, on && styles.expiryChipTextOn]}>{p.label}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </>
+        )}
+        <View style={styles.expiryLabelRow}>
+          <Text style={styles.label}>소비기한</Text>
+          {!tracked ? null : customExpiry === undefined ? (
+            <Text style={[styles.expiryHint, base.boughtUnknown && styles.expiryHintWarn]}>
+              {base.boughtUnknown
+                ? '산 날을 몰라서 짧게 잡았어요'
+                : boughtDaysAgo !== undefined
+                  ? '산 날 기준으로 계산했어요'
+                  : '재료별 기본 보관 기간으로 계산했어요'}
+            </Text>
+          ) : (
+            <Pressable onPress={() => setCustomExpiry(undefined)} hitSlop={8} accessibilityRole="button">
+              <Text style={styles.expiryReset}>{perishable ? '기본값으로' : '기한 관리 안 하기'}</Text>
+            </Pressable>
+          )}
+        </View>
+        {!tracked ? (
+          <View style={styles.untracked}>
+            <Text style={styles.untrackedText}>오래 두고 먹는 재료라 기한을 따로 챙기지 않아요.</Text>
+            <Pressable
+              onPress={() => setCustomExpiry(expiry)}
+              hitSlop={8}
+              style={({ pressed }) => [styles.untrackedButton, pressed && styles.pressed]}
+              accessibilityRole="button">
+              <Text style={styles.untrackedButtonText}>기한 직접 정하기</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <>
+            <View style={styles.expiryRow}>
+              <Pressable
+                style={({ pressed }) => [styles.stepper, pressed && styles.pressed]}
+                onPress={() => setCustomExpiry(Math.max(addDays(today, -1), addDays(expiry, -1)))}
+                accessibilityRole="button"
+                accessibilityLabel="하루 앞당기기">
+                <Ionicons name="remove" size={18} color={colors.text} />
+              </Pressable>
+              <View style={styles.expiryValue}>
+                <Text style={styles.expiryDate}>{formatMonthDay(expiry)}</Text>
+                <Text style={[styles.expiryDays, { color: EXPIRY_COLORS[expiryLevel(days)].ink }]}>
+                  {expiryLabel(days)}
+                </Text>
+              </View>
+              <Pressable
+                style={({ pressed }) => [styles.stepper, pressed && styles.pressed]}
+                onPress={() => setCustomExpiry(addDays(expiry, 1))}
+                accessibilityRole="button"
+                accessibilityLabel="하루 늘리기">
+                <Ionicons name="add" size={18} color={colors.text} />
+              </Pressable>
+            </View>
+            <View style={styles.expiryQuick}>
+              {EXPIRY_PRESETS.map((p) => {
+                const value = addDays(today, p.days);
+                const on = startOfDay(expiry) === value;
+                return (
+                  <Pressable
+                    key={p.label}
+                    style={[styles.expiryChip, on && styles.expiryChipOn]}
+                    onPress={() => setCustomExpiry(value)}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: on }}>
+                    <Text style={[styles.expiryChipText, on && styles.expiryChipTextOn]}>{p.label}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </>
+        )}
         <View style={styles.sheetButtons}>
           <PrimaryButton
             label="삭제"
@@ -243,6 +471,8 @@ function EditSheet({ item, onClose }: { item: PantryItem; onClose: () => void })
             label="저장"
             onPress={() => {
               updateIngredient(item.id, name, amount);
+              if (customExpiry !== item.expiresAt) setExpiry(item.id, customExpiry);
+              if (boughtDaysAgo !== undefined) setBought([item.id], boughtDaysAgo);
               onClose();
             }}
           />
@@ -427,6 +657,115 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     lineHeight: 14,
   },
+  expiryBadge: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    paddingHorizontal: 5,
+    borderRadius: radius.pill,
+    overflow: 'hidden',
+    fontSize: 9,
+    fontWeight: '700',
+    lineHeight: 14,
+  },
+  check: {
+    marginTop: spacing.lg,
+    marginHorizontal: spacing.lg,
+    padding: spacing.lg,
+    gap: 10,
+    borderRadius: radius.xl - 4,
+    backgroundColor: colors.surfaceMuted,
+  },
+  checkCount: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.textSoft,
+  },
+  checkSub: {
+    marginTop: -4,
+    fontSize: 12,
+    color: colors.textSoft,
+  },
+  checkActions: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  checkButton: {
+    flex: 1,
+    height: 38,
+    borderRadius: radius.pill,
+    backgroundColor: colors.ink,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkButtonText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.onInk,
+  },
+  soon: {
+    marginTop: spacing.lg,
+    marginHorizontal: spacing.lg,
+    padding: spacing.lg,
+    gap: 10,
+    borderRadius: radius.xl - 4,
+    backgroundColor: '#FFF6F1',
+    borderWidth: 1,
+    borderColor: '#FFE1D2',
+  },
+  soonHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  soonTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  soonCount: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#C2360C',
+  },
+  soonChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  soonChip: {
+    height: 32,
+    paddingLeft: 8,
+    paddingRight: 10,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surface,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  soonChipName: {
+    fontSize: 13,
+    color: colors.text,
+  },
+  soonChipDays: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  soonSub: {
+    marginTop: 2,
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.textSoft,
+  },
+  soonReady: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#1F7A47',
+  },
+  soonMissing: {
+    fontSize: 11,
+    color: colors.textSoft,
+  },
   shelfLine: {
     marginTop: spacing.md,
     height: 3,
@@ -578,6 +917,114 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceMuted,
     fontSize: 15,
     color: colors.text,
+  },
+  expiryLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: spacing.xs,
+  },
+  expiryHint: {
+    flexShrink: 1,
+    marginLeft: spacing.sm,
+    textAlign: 'right',
+    fontSize: 12,
+    color: colors.textMuted,
+  },
+  expiryHintWarn: {
+    color: '#9A5B00',
+  },
+  expiryReset: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.textSoft,
+    textDecorationLine: 'underline',
+  },
+  untracked: {
+    minHeight: 46,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
+    backgroundColor: colors.surfaceMuted,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  untrackedText: {
+    flex: 1,
+    fontSize: 13,
+    color: colors.textSoft,
+  },
+  untrackedButton: {
+    height: 30,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    justifyContent: 'center',
+  },
+  untrackedButtonText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  expiryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  stepper: {
+    width: 46,
+    height: 46,
+    borderRadius: radius.md,
+    backgroundColor: colors.surfaceMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  expiryValue: {
+    flex: 1,
+    height: 46,
+    borderRadius: radius.md,
+    backgroundColor: colors.surfaceMuted,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+  },
+  expiryDate: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  expiryDays: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  expiryQuick: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  expiryChip: {
+    height: 30,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.border,
+    justifyContent: 'center',
+  },
+  expiryChipOn: {
+    backgroundColor: colors.ink,
+    borderColor: colors.ink,
+  },
+  expiryChipText: {
+    fontSize: 12,
+    color: colors.text,
+  },
+  expiryChipTextOn: {
+    color: colors.onInk,
+    fontWeight: '700',
   },
   sheetButtons: {
     flexDirection: 'row',

@@ -85,6 +85,21 @@ function matchesPreferences(recipe: Recipe, prefs: Preferences): boolean {
 }
 
 /**
+ * items(급한 순으로 정렬된 재료)를 하나라도 쓰는 추천만 남긴다.
+ * 만들기 쉬운(보유 비율이 높은) 요리를 먼저, 같으면 더 급한 재료를 쓰는 요리를 먼저 놓는다.
+ */
+export function matchesUsing(matches: RecipeMatch[], items: PantryItem[]): RecipeMatch[] {
+  const owned = items.map((p) => new Set([normalizeIngredient(p.name)]));
+  // 쓰는 재료 중 가장 급한 것의 순위. 하나도 안 쓰면 -1.
+  const rank = (m: RecipeMatch) => owned.findIndex((o) => m.have.some((i) => hasIngredient(o, i.name)));
+  return matches
+    .map((m) => ({ m, r: rank(m) }))
+    .filter(({ r }) => r >= 0)
+    .sort((a, b) => b.m.coverage - a.m.coverage || a.r - b.r || a.m.recipe.minutes - b.m.recipe.minutes)
+    .map(({ m }) => m);
+}
+
+/**
  * 보유 재료와 조건으로 레시피를 추천한다.
  * preferOwned면 핵심 재료를 하나도 갖고 있지 않은 레시피는 뺀다.
  * 보유 비율이 높고 조리 시간이 짧은 순으로 정렬한다.
