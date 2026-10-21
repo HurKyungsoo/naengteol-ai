@@ -1,6 +1,7 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import type { ColorValue } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors } from '@/theme';
 
@@ -26,6 +27,7 @@ function FridgeIcon({ focused, color }: { focused: boolean; color: ColorValue })
 }
 
 export default function TabsLayout() {
+  const insets = useSafeAreaInsets();
   return (
     <Tabs
       screenOptions={{
@@ -33,7 +35,8 @@ export default function TabsLayout() {
         tabBarActiveTintColor: colors.ink,
         tabBarInactiveTintColor: colors.textSoft,
         tabBarLabelStyle: { fontSize: 11 },
-        tabBarStyle: { borderTopColor: colors.border },
+        // 기본 높이(49)에서는 한글 탭 이름 아랫부분이 잘려서 조금 키운다. 높이를 직접 주면 아래 안전 영역도 직접 더해야 한다.
+        tabBarStyle: { borderTopColor: colors.border, height: 58 + insets.bottom, paddingTop: 4, paddingBottom: insets.bottom },
         sceneStyle: { backgroundColor: colors.background },
       }}>
       <Tabs.Screen name="index" options={{ title: '홈', tabBarIcon: icon('home-outline', 'home') }} />
