@@ -19,6 +19,8 @@ type PersistedState = {
   recentViewed: string[];
   preferences: Preferences;
   profile: Profile;
+  /** 처음 켰을 때의 소개(온보딩)를 봤는지 */
+  onboarded: boolean;
 };
 
 const EMPTY_STATE: PersistedState = {
@@ -28,6 +30,7 @@ const EMPTY_STATE: PersistedState = {
   recentViewed: [],
   preferences: { preferOwned: true },
   profile: { nickname: '냉털이', notifications: true },
+  onboarded: false,
 };
 
 type AppStateValue = PersistedState & {
@@ -47,6 +50,7 @@ type AppStateValue = PersistedState & {
   completeCooking: (recipeId: string, usedPantryIds: string[]) => void;
   setPreferences: (prefs: Preferences) => void;
   updateProfile: (profile: Partial<Profile>) => void;
+  completeOnboarding: () => void;
 };
 
 const AppStateContext = createContext<AppStateValue | null>(null);
@@ -74,6 +78,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           ...saved,
           preferences: { ...EMPTY_STATE.preferences, ...saved.preferences },
           profile: { ...EMPTY_STATE.profile, ...saved.profile },
+          // 온보딩이 생기기 전부터 쓰던 사람에게는 보여 주지 않는다.
+          onboarded: saved.onboarded ?? true,
         });
       })
       .catch((e) => console.warn('저장된 데이터를 불러오지 못했습니다', e))
@@ -170,6 +176,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       },
       updateProfile: (profile) => {
         setState((s) => ({ ...s, profile: { ...s.profile, ...profile } }));
+      },
+      completeOnboarding: () => {
+        setState((s) => ({ ...s, onboarded: true }));
       },
     }),
     [state, loaded],

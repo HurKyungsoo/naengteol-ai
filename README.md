@@ -26,6 +26,7 @@ npx expo-doctor
 | 화면 | 파일 |
 |---|---|
 | 스플래시 | `src/components/Intro.tsx` (저장 데이터를 불러오는 동안 표시) |
+| 온보딩 4장 (처음 켰을 때 한 번) | `src/components/Onboarding.tsx` (등장 애니메이션은 `src/components/Appear.tsx`) |
 | 홈 (탭) | `src/app/(tabs)/index.tsx` |
 | 추천 레시피 (탭) | `src/app/(tabs)/recipes.tsx` |
 | 재료 관리 (탭) — 보유 재료 / 사용 기록 | `src/app/(tabs)/pantry.tsx` |

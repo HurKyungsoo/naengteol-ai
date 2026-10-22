@@ -58,6 +58,19 @@ async function ensurePermission(): Promise<boolean> {
   return asked.granted;
 }
 
+/** 알림 권한을 아직 한 번도 묻지 않았는지. 웹은 알림을 지원하지 않아 false. */
+export async function canAskNotifications(): Promise<boolean> {
+  if (!SUPPORTED) return false;
+  const current = await Notifications.getPermissionsAsync();
+  return current.status === 'undetermined' && current.canAskAgain;
+}
+
+/** 시스템 알림 권한 창을 띄운다. 분석 결과 화면처럼 왜 필요한지 먼저 설명한 뒤에 부른다. */
+export async function askNotifications(): Promise<boolean> {
+  if (!SUPPORTED) return false;
+  return ensurePermission();
+}
+
 async function reschedule(pantry: PantryItem[], enabled: boolean): Promise<void> {
   // 이 앱이 예약하는 알림은 소비기한 알림뿐이라 전부 지우고 다시 만든다.
   await Notifications.cancelAllScheduledNotificationsAsync();
