@@ -1,19 +1,24 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Appear } from '@/components/Appear';
 import { IngredientIcon } from '@/components/IngredientIcon';
 import { BottomBar, PrimaryButton } from '@/components/PrimaryButton';
 import { ScreenHeader } from '@/components/ScreenHeader';
+import { Sticker } from '@/components/Sticker';
 import { analyzeFridgePhoto } from '@/lib/analyze';
-import { BOUGHT_PRESETS, isPerishable } from '@/lib/expiry';
+import { BOUGHT_PRESETS, isPerishable, shelfLifeDays } from '@/lib/expiry';
+import { ingredientIcon } from '@/lib/icons';
 import { FREQUENT_INGREDIENTS } from '@/lib/ingredientInput';
 import { hasIngredient, normalizeIngredient } from '@/lib/ingredients';
 import { getCapturedPhotos, setMissingIds } from '@/lib/photoSession';
 import { mergeScans, missingFromScan, type MergedIngredient } from '@/lib/scan';
+import { askNotifications, canAskNotifications } from '@/lib/useExpiryNotifications';
 import { useAppState } from '@/state/AppState';
-import { colors, radius, spacing } from '@/theme';
+import { colors, radius, shadow, spacing } from '@/theme';
 import type { Bought } from '@/types';
 
 type Status = 'loading' | 'done' | 'error';
@@ -32,7 +37,10 @@ const CHECK_MIN_PHOTOS = 2;
 
 export default function AnalysisScreen() {
   const [photos] = useState(getCapturedPhotos);
-  const { pantry, addIngredient } = useAppState();
+  const { pantry, addIngredient, profile, updateProfile } = useAppState();
+  const insets = useSafeAreaInsets();
+  // 알림 권한을 묻기 전에 보여 주는 안내. 곧 상할 수 있는 재료 이름이 들어 있으면 열린다.
+  const [notifyFor, setNotifyFor] = useState<string[] | null>(null);
   const [status, setStatus] = useState<Status>('loading');
   const [error, setError] = useState<string | null>(null);
   const [demo, setDemo] = useState(false);
@@ -115,7 +123,25 @@ export default function AnalysisScreen() {
     (n) => !hasIngredient(owned, n) && !items.some((i) => normalizeIngredient(i.name) === normalizeIngredient(n)),
   ).slice(0, 6);
 
-  const confirm = () => {
+  // 처음으로 기한을 챙길 재료를 담을 때, 시스템 권한 창보다 먼저 왜 알림이 필요한지 보여 준다.
+  // 재료를 넣으면 알림 예약이 바로 권한을 물어서, 넣기 전에 묻는다.
+  const confirm = async () => {
+    if (profile.notifications && perishable.length > 0 && (await canAskNotifications())) {
+      setNotifyFor([...perishable].sort((a, b) => shelfLifeDays(a) - shelfLifeDays(b)));
+      return;
+    }
+    finish();
+  };
+
+  const answerNotify = async (allow: boolean) => {
+    setNotifyFor(null);
+    if (allow) await askNotifications();
+    // 나중에 하겠다고 하면 알림을 꺼 두고, 마이페이지에서 다시 켤 수 있게 한다.
+    else updateProfile({ notifications: false });
+    finish();
+  };
+
+  const finish = () => {
     // 체크하지 않은 재료도 사진에 보였던 것이므로 "안 보인 재료"에서는 뺀다.
     const missing = photos.length >= CHECK_MIN_PHOTOS ? missingFromScan(pantry, items.map((i) => i.name)) : [];
     checked.forEach((name) => addIngredient(name, undefined, bought));
@@ -289,6 +315,35 @@ export default function AnalysisScreen() {
           disabled={status !== 'done'}
         />
       </BottomBar>
+
+      <Modal visible={notifyFor !== null} transparent animationType="fade" onRequestClose={() => answerNotify(false)}>
+        <View style={styles.dim}>
+          <Appear play={notifyFor !== null} kind="slide">
+            <View style={[styles.sheet, { paddingBottom: insets.bottom + spacing.md }]}>
+              <View style={styles.handle} />
+              {notifyFor && notifyFor.length > 0 && (
+                <Appear play kind="pop" delay={250} style={styles.sheetSticker}>
+                  <Sticker icon={ingredientIcon(notifyFor[0])} size={64} rotate={-6} />
+                </Appear>
+              )}
+              <Text style={styles.sheetTitle}>곧 상할 수 있는 재료가 있어요{'\n'}상하기 전에 알려 드릴까요?</Text>
+              <Text style={styles.sheetBody}>
+                {notifyFor?.slice(0, 3).join(', ')}
+                {notifyFor && notifyFor.length > 3 ? ` 외 ${notifyFor.length - 3}개` : ''}처럼 금방 상하는 재료는
+                소비기한 전날과 당일 오후 5시에 알려 드려요. 광고 알림은 보내지 않아요.
+              </Text>
+              <View style={styles.sheetButtons}>
+                <View style={styles.sheetRow}>
+                  <PrimaryButton label="알림 받기" onPress={() => answerNotify(true)} />
+                </View>
+                <View style={styles.sheetRow}>
+                  <PrimaryButton label="나중에 할게요" variant="light" onPress={() => answerNotify(false)} />
+                </View>
+              </View>
+            </View>
+          </Appear>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -527,5 +582,50 @@ const styles = StyleSheet.create({
     minWidth: 0,
     fontSize: 14,
     color: colors.text,
+  },
+  dim: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(17,17,17,0.45)',
+  },
+  sheet: {
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.md,
+    gap: spacing.lg,
+    borderTopLeftRadius: radius.xl,
+    borderTopRightRadius: radius.xl,
+    backgroundColor: colors.surface,
+    boxShadow: shadow.sticker,
+  },
+  handle: {
+    alignSelf: 'center',
+    width: 40,
+    height: 5,
+    borderRadius: radius.pill,
+    backgroundColor: colors.border,
+  },
+  sheetSticker: {
+    alignSelf: 'flex-start',
+    marginTop: spacing.xs,
+  },
+  sheetTitle: {
+    fontSize: 22,
+    lineHeight: 30,
+    fontWeight: '800',
+    letterSpacing: -0.6,
+    color: colors.text,
+  },
+  sheetBody: {
+    marginTop: -spacing.sm,
+    fontSize: 15,
+    lineHeight: 22,
+    color: colors.textSoft,
+  },
+  sheetButtons: {
+    gap: 10,
+    paddingTop: spacing.xs,
+  },
+  sheetRow: {
+    flexDirection: 'row',
   },
 });
