@@ -30,8 +30,8 @@ BOTTOM = (3, 68, 53)
 MID = (6, 80, 61)  # #06503D
 S = 1024
 # 그림이 차지하는 폭 (캔버스 대비). 아이콘은 둥근 사각형 안, 적응형은 가운데 안전 영역 안에서 여유 있게.
-ICON_WIDTH = 0.74
-ADAPTIVE_WIDTH = 0.48
+ICON_WIDTH = 0.66
+ADAPTIVE_WIDTH = 0.42
 
 
 def foreground(art: Image.Image) -> Image.Image:
