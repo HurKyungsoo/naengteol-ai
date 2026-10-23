@@ -21,6 +21,28 @@ npx eslint src
 npx expo-doctor
 ```
 
+## APK 빌드 (Android 설치 파일)
+
+**클라우드 (EAS):** Expo 계정이 있으면 PC에 Android 도구 없이 만들 수 있다. 끝나면 APK 다운로드 링크가 나온다.
+
+```bash
+npx eas-cli@latest login
+npx eas-cli@latest build --platform android --profile preview
+```
+
+**로컬:** JDK 17 이상과 Android SDK(compileSdk 36, build-tools 36.0.0, NDK 27.1.12297006, CMake 3.22.1)가 필요하다.
+
+```bash
+npx expo prebuild --platform android --clean
+cd android
+./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a
+# → android/app/build/outputs/apk/release/app-release.apk
+```
+
+- `android/`는 `app.json` 설정으로 매번 다시 만드는 폴더라 저장소에 넣지 않는다.
+- 로컬 release APK는 디버그 키로 서명돼 기기에 바로 설치할 수 있다 (Play 스토어 제출용은 별도 업로드 키 필요).
+- 휴대폰에 설치하려면 설정에서 "출처를 알 수 없는 앱 설치"를 허용한다.
+
 ## 화면 구성
 
 | 화면 | 파일 |

@@ -2,12 +2,16 @@ import { router, Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View } from 'react-native';
 
+import { ErrorScreen } from '@/components/ErrorScreen';
 import { Intro } from '@/components/Intro';
 import { Onboarding, type OnboardingStart } from '@/components/Onboarding';
 import { useExpiryNotifications } from '@/lib/useExpiryNotifications';
 import { AppStateProvider, useAppState } from '@/state/AppState';
 import { RecipesProvider } from '@/state/RecipesProvider';
 import { colors } from '@/theme';
+
+// 어느 화면에서든 그리다 오류가 나면 앱이 꺼지지 않고 [다시 시도] 화면을 보여 준다.
+export const ErrorBoundary = ErrorScreen;
 
 function AppShell() {
   const { loaded, pantry, profile, onboarded, completeOnboarding } = useAppState();
