@@ -190,7 +190,7 @@ npx supabase functions deploy analyze-fridge
 - **레시피 사진** `assets/recipes/` — Unsplash 라이선스 무료 사진 (Unsplash+ 유료 사진 제외). 사진작가와 원본 링크는 `src/data/assets.ts`에 있고, 앱의 마이 → "사진·아이콘 출처"에서 볼 수 있다.
 - **재료 아이콘** `assets/ingredients/` — [Flaticon](https://www.flaticon.com/) Special Flat 스타일 (Freepik/Magnific). 무료 라이선스는 **출처 표시 필수**라 앱의 출처 화면에 표시한다. 원본 512px PNG와 아이콘별 링크는 `assets/ingredients/flaticon-src/` (`LICENSE.txt`, `picks.json`).
 - 앱용 아이콘은 원본에 그림자·빛 반사를 더해 256px로 만든 것이다: `node scripts/stylize-icons.mjs` (효과 세기는 스크립트의 `EFFECT`). 아이콘을 바꾸려면 같은 이름으로 원본을 덮어쓰고 다시 실행한다. 받을 목록은 `docs/flaticon-icons.md`.
-- 앱 아이콘(`icon.png`, 적응형 아이콘 3장)·스플래시·파비콘은 `node scripts/make-app-icon.mjs`로 만든다. 오렌지 바탕(`colors.accent`) + 흰 냉장고 + 토마토 스티커.
+- 앱 아이콘(`icon.png`, 적응형 아이콘 3장)·스플래시·파비콘은 `python3 scripts/make-app-icon.py`로 만든다 (Pillow, numpy 필요). 원화는 `assets/brand/`: 짙은 초록 바탕 + 냉장고 + 채소 그릇, 테마 아이콘용 모노톤.
 - 사진·아이콘을 추가하면 `src/data/assets.ts`에 `require` 항목을 추가하고, 재료 이름 → 아이콘 매핑은 `src/lib/icons.ts`에서 고친다.
 
 ## 주의
