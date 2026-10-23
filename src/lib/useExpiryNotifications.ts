@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { Platform } from 'react-native';
 
 import { addDays, daysLeft, isEstimated, isTracked, needsCheck } from '@/lib/expiry';
+import { TIMER_KIND } from '@/lib/timerNotifications';
 import type { PantryItem } from '@/types';
 
 // 소비기한 알림은 기기 안에서 예약하는 로컬 알림이다 (Expo Go에서도 된다). 웹은 지원하지 않는다.
@@ -16,12 +17,11 @@ const SCHEDULE_DAYS = 7;
 
 if (SUPPORTED) {
   Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-      shouldShowBanner: true,
-      shouldShowList: true,
-      shouldPlaySound: false,
-      shouldSetBadge: false,
-    }),
+    // 조리 타이머는 앱이 켜져 있으면 조리 화면이 직접 진동으로 알려 주니, 알림은 앱 밖에 있을 때만 보인다.
+    handleNotification: async (n) => {
+      const show = n.request.content.data?.kind !== TIMER_KIND;
+      return { shouldShowBanner: show, shouldShowList: show, shouldPlaySound: false, shouldSetBadge: false };
+    },
   });
 }
 
@@ -72,8 +72,13 @@ export async function askNotifications(): Promise<boolean> {
 }
 
 async function reschedule(pantry: PantryItem[], enabled: boolean): Promise<void> {
-  // 이 앱이 예약하는 알림은 소비기한 알림뿐이라 전부 지우고 다시 만든다.
-  await Notifications.cancelAllScheduledNotificationsAsync();
+  // 소비기한 알림만 지우고 다시 만든다. 돌아가는 조리 타이머 알림은 남겨 둔다.
+  const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+  await Promise.all(
+    scheduled
+      .filter((n) => n.content.data?.kind !== TIMER_KIND)
+      .map((n) => Notifications.cancelScheduledNotificationAsync(n.identifier)),
+  );
   if (!enabled || pantry.length === 0) return;
   if (!(await ensurePermission())) return;
 
@@ -126,10 +131,12 @@ export function useExpiryNotifications(pantry: PantryItem[], enabled: boolean, l
     reschedule(pantry, enabled).catch((e) => console.warn('소비기한 알림을 예약하지 못했습니다', e));
   }, [pantry, enabled, loaded]);
 
-  // 알림을 누르면 냉장고 탭으로 간다.
+  // 소비기한 알림을 누르면 냉장고 탭으로 간다. (조리 타이머 알림은 앱만 열면 조리 화면이 그대로 있다)
   useEffect(() => {
     if (!SUPPORTED) return;
-    const sub = Notifications.addNotificationResponseReceivedListener(() => router.navigate('/pantry'));
+    const sub = Notifications.addNotificationResponseReceivedListener((r) => {
+      if (r.notification.request.content.data?.kind !== TIMER_KIND) router.navigate('/pantry');
+    });
     return () => sub.remove();
   }, []);
 }

@@ -137,7 +137,7 @@ export default function CookScreen() {
                     onTimer={() => {
                       const seconds = stepSeconds(step);
                       if (timers.find(index)) timers.stop(index);
-                      else if (seconds) timers.start(index, seconds);
+                      else if (seconds) timers.start(index, seconds, `${index + 1}단계 ${step.title ?? ''}`.trim());
                     }}
                   />
                   {tips.length > 0 && (
