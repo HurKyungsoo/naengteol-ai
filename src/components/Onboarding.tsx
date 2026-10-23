@@ -21,12 +21,10 @@ import { Sticker } from '@/components/Sticker';
 import { EXPIRY_COLORS, expiryLevel, expiryPhrase } from '@/lib/expiry';
 import { colors, radius, shadow, spacing } from '@/theme';
 
-export type OnboardingStart = 'camera' | 'manual';
-
 const PAGE_COUNT = 4;
 
-/** 처음 켰을 때 한 번만 보여 주는 소개 4장. 마지막 장에서 사진 또는 직접 입력으로 시작한다. */
-export function Onboarding({ onDone }: { onDone: (start: OnboardingStart) => void }) {
+/** 처음 켰을 때 한 번만 보여 주는 소개 4장. 마지막 장의 [시작하기]로 홈에 들어간다. */
+export function Onboarding({ onDone }: { onDone: () => void }) {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const scroll = useRef<ScrollView>(null);
@@ -112,22 +110,12 @@ export function Onboarding({ onDone }: { onDone: (start: OnboardingStart) => voi
         />
       </ScrollView>
 
-      <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.md }, last && styles.footerLast]}>
+      {/* 모든 장에서 같은 자리의 버튼: 앞 장은 [다음], 마지막 장은 [시작하기] */}
+      <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.md }]}>
         <Dots page={page} />
-        {last ? (
-          <View style={styles.startButtons}>
-            <View style={styles.row}>
-              <PrimaryButton label="사진으로 시작하기" onPress={() => onDone('camera')} />
-            </View>
-            <View style={styles.row}>
-              <PrimaryButton label="직접 입력할게요" variant="light" onPress={() => onDone('manual')} />
-            </View>
-          </View>
-        ) : (
-          <View style={styles.nextButton}>
-            <PrimaryButton label="다음" onPress={() => goTo(page + 1)} />
-          </View>
-        )}
+        <View style={styles.nextButton}>
+          <PrimaryButton label={last ? '시작하기' : '다음'} onPress={last ? onDone : () => goTo(page + 1)} />
+        </View>
       </View>
     </View>
   );
@@ -412,20 +400,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.md,
   },
-  footerLast: {
-    flexDirection: 'column',
-    alignItems: 'stretch',
-    gap: 18,
-  },
-  row: {
-    flexDirection: 'row',
-  },
   nextButton: {
     width: 150,
     flexDirection: 'row',
-  },
-  startButtons: {
-    gap: 10,
   },
   dots: {
     flexDirection: 'row',
