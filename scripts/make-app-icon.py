@@ -29,6 +29,9 @@ TOP = (10, 92, 69)
 BOTTOM = (3, 68, 53)
 MID = (6, 80, 61)  # #06503D
 S = 1024
+# 그림이 차지하는 폭 (캔버스 대비). 아이콘은 둥근 사각형 안, 적응형은 가운데 안전 영역 안에서 여유 있게.
+ICON_WIDTH = 0.74
+ADAPTIVE_WIDTH = 0.48
 
 
 def foreground(art: Image.Image) -> Image.Image:
@@ -83,14 +86,14 @@ art = Image.open(ART)
 fg = foreground(art)
 
 # 원화에서 그림이 둥근 사각형의 약 3/4을 차지한다 → 같은 비율로 꽉 찬 아이콘을 다시 만든다.
-full = place(gradient().convert('RGBA'), fg, 0.74)
+full = place(gradient().convert('RGBA'), fg, ICON_WIDTH)
 save(full.convert('RGB'), 'icon.png')
 save(full.convert('RGB'), 'favicon.png', 48)
 
 # 적응형 아이콘은 원·물방울 등으로 잘려도 그림이 남도록 가운데 안전 영역에 맞춘다.
-save(place(Image.new('RGBA', (S, S)), fg, 0.48), 'android-icon-foreground.png')
+save(place(Image.new('RGBA', (S, S)), fg, ADAPTIVE_WIDTH), 'android-icon-foreground.png')
 save(Image.new('RGB', (S, S), MID), 'android-icon-background.png')
-save(place(Image.new('RGBA', (S, S)), silhouette(Image.open(MONO_ART)), 0.48), 'android-icon-monochrome.png', 432)
+save(place(Image.new('RGBA', (S, S)), silhouette(Image.open(MONO_ART)), ADAPTIVE_WIDTH), 'android-icon-monochrome.png', 432)
 
 # 스플래시: 흰 배경 위 둥근 아이콘. 이어서 나오는 앱 인트로 화면도 흰 바탕이라 깜빡이지 않는다.
 corner = Image.new('L', (S, S), 0)
